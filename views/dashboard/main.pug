@@ -1,0 +1,201 @@
+doctype html
+html(lang='en')
+  include ../include/head.pug
+  body(style=`overflow: hidden; background-color: ${backColor}`)
+    include ../include/scripts.pug
+
+    .dropdown
+      button#menu.btn.btn-secondary.opacity75(type='button' data-bs-toggle='dropdown' style='position:absolute; left:8px; top:8px;')
+        img.rounded-circle(src='/public/favicon/favicon-32x32.png' width='32px')
+        | 
+        | Menu
+        | 
+        i.ws-indicator.bi-lightning-fill
+      ul.dropdown-menu()
+        li.ws-indicator
+          h3.dropdown-header.ws-indicator
+            | Websocket error!
+          hr.dropdown-divider.text-secondary
+        li
+          h3.dropdown-header.text-success
+            | Hello RAILMAN!
+        li
+          a.dropdown-item.hidden(href='#')
+            i.bi.bi-people-fill
+            |
+            | Guest users
+        li
+          a.dropdown-item(href='/editor/layout')
+            i.bi.bi-layers
+            | 
+            | Layout editor
+        li
+          a.dropdown-item(href='#' onclick='showcodeeditor()')
+            i.bi.bi-code-slash 
+            | 
+            | Code editor
+        li
+          a.dropdown-item(href='#' onclick='shownetworkinfo()')
+            i.bi.bi-hdd-network-fill
+            | 
+            | Segment network
+        li
+          a.dropdown-item.disabled(href='#')
+            i.bi.bi-joystick
+            | 
+            | Z21
+        li
+          hr.dropdown-divider
+        li
+          a.dropdown-item.small.disabled(href='#')
+            i.bi.bi-wrench
+            | 
+            | Tools
+        li
+          a.dropdown-item.small.disabled(href='#')
+            i.bi.bi-gear-fill
+            | 
+            | Settings
+        li
+          a.dropdown-item.small(href='#' onclick='doFullScreen()')
+            i.bi.bi-arrows-fullscreen
+            | 
+            | Full screen
+    button#fullscreen.fullscreen.btn.btn-secondary.btn-sm.opacity75(type='button' style='position:absolute; right:8px; top:8px;')
+      i.bi.bi-arrows-fullscreen
+      | 
+      | Full screen
+
+    #bg
+
+  include elements/common.js.pug
+  include bg.js.pug
+  include ws.js.pug
+  include codeeditor.js.pug
+  include network.js.pug
+
+  include elements/signal.js.pug
+  include elements/turnout.js.pug
+
+  include elements/ambientLight.js.pug
+  include elements/sound.js.pug
+  include elements/button.js.pug
+
+  script(type='text/javascript').
+    setTimeout(() => {
+      $('#fullscreen').hide();
+    },
+    5000);
+
+    $('.fullscreen').click(() => {
+      doFullScreen();
+    })
+
+    function doFullScreen() {
+      if (document.fullscreenElement !== null)
+        document.exitFullscreen()
+      else
+        document.body.requestFullscreen()
+    }
+
+
+  script(type='text/javascript')
+    |
+    | $(function() {
+    |
+    | initializationState = true
+    |
+    each segment in segments
+      each signal in segment.signals
+        |  new Signal('
+        = signal.id
+        |', 
+        = segment.id
+        |, 
+        = segment.x + signal.x
+        |, 
+        = segment.y + signal.y
+        |, 
+        = signal.panel
+        |, 
+        = signal.index
+        |, '
+        = signal.type
+        |', '
+        = signal.bulbs
+        |', '
+        = signal.currentstate
+        |');
+        |
+      each turnout in segment.turnouts
+        |  new Turnout('
+        = turnout.id
+        |', 
+        = segment.id
+        |, 
+        = segment.x + turnout.x
+        |, 
+        = segment.y + turnout.y
+        |, 
+        = turnout.panel
+        |, 
+        = turnout.index
+        |, '
+        = turnout.type
+        |', 
+        = turnout.currentstate
+        |);
+        |
+      each light in segment.ambientLights
+        |  new AmbientLight('
+        = light.id
+        |', 
+        = segment.id
+        |, 
+        = segment.x + light.x
+        |, 
+        = segment.y + light.y
+        |, 
+        = light.panel
+        |, 
+        = light.index
+        |, 
+        = light.currentstate
+        |);
+        |
+      each sound in segment.sounds
+        |  new Sound('
+        = sound.id
+        |', 
+        = segment.id
+        |, 
+        = segment.x + sound.x
+        |, 
+        = segment.y + sound.y
+        |, 
+        = sound.index
+        |, 
+        = sound.currentstate
+        |);
+        |
+      each button in segment.buttons
+        |  new Button('
+        = button.id
+        |', 
+        = segment.id
+        |, 
+        = segment.x + button.x
+        |, 
+        = segment.y + button.y
+        |, '
+        = button.name
+        |', '
+        = button.color
+        |');
+        |
+    |
+    | initializationState = false
+    |
+    | initLongPress();
+    | })
+    |

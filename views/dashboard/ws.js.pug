@@ -1,0 +1,38 @@
+script(type='text/javascript').
+  ws_channels =
+  {
+    layoutchange: function() { 
+      const editorOpened = $('#codeeditor').length
+      if (!editorOpened)
+        pagereload()
+    },
+    'dashboard-element': function(json) { 
+      processElementEvent(json.segmentid, json.panel, json.event, json.eventdata)
+    },
+    'network-change': function(json) { 
+      const editorOpened = $('#codeeditor').length
+      if (!editorOpened)
+        ToastInfo.fire({ html: `${json.title}<br/><small>${json.message}</small>` })
+    },
+    'code-run-success': function(json) { 
+      const editorSuccess = $('#codeeditorsuccess')
+      if (editorSuccess.length) {
+        editorSuccess.html(`${json.title}: ${json.message}`)
+        setTimeout(() =>{
+          editorSuccess.html('')
+        }, 1500)
+      }
+    },
+    'code-run-error': function(json) { 
+      const editorError = $('#codeeditorerror')
+      if (!editorError.length)
+        ToastError.fire({ html: `${json.title}<br/><small>${json.message}</small>` })
+      else
+        editorError.html(`${json.title}: ${json.message}`)
+
+    },
+  }
+
+  function ws_onreceive(data) {
+    //console.log(data);
+  }

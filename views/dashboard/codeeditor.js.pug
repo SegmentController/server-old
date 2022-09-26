@@ -1,0 +1,74 @@
+script(type='text/javascript').
+    function showcodeeditor()
+    {
+        $.get("/code/show", function(html) {
+            Swal.fire({
+                width: '95vw',
+                confirmButtonText: "Close",
+                allowEscapeKey : false,
+                allowOutsideClick: false,
+                title: 'Code for automations',
+                customClass: 'swal-codeeditor',
+                html: html,
+            })
+        })
+        .fail(function() {
+            ToastError.fire({ title: 'Error occured' })
+        })
+    }
+
+    function savecode()
+    {
+        $('#codeeditorerror').html('');
+        $('#codeeditorsuccess').html('');
+
+        const code = $('textarea#codeeditor').val();
+        $.post("/code/save", { code: code })
+        .fail(function(response) {
+            ToastError.fire({ title: 'Error occured', text: response.responseText })
+        })
+    }
+
+    function formatcode()
+    {
+        const code = $('textarea#codeeditor').val();
+        $.post("/code/format", { code: code })
+        .done(function(response) {
+            $('textarea#codeeditor').val(response)
+        })
+        .fail(function(response) {
+            ToastError.fire({ title: 'Error occured', text: response.responseText })
+        })
+    }
+
+    function editorkeypress(e)
+    {
+        if (e.which == 13)
+        {
+            var editor = $('#codeeditor');
+            setTimeout(function()
+            {
+                var start = editor.prop('selectionStart');
+                var v = editor.val();
+
+                var prevLine = "";
+                for (var i = start - 2; i >= 0 && v[i] != "\n"; i--)
+                    prevLine = v[i] + prevLine;
+
+                var indentation = 0;
+                for (var i = 0; i < prevLine.length && prevLine[i] == " "; i++)
+                    indentation++;
+
+                editor.val(v.slice(0, start) + " ".repeat(indentation) + v.slice(start));
+                editor.prop({ selectionStart: start + indentation, selectionEnd: start + indentation });
+            }, 1);
+        }
+    }
+
+    function editorkeydown(e)
+    {
+        if (e.key == 'F' && e.ctrlKey && e.shiftKey)
+            formatcode();
+        if (e.key == 'S' && e.ctrlKey && e.shiftKey)
+            savecode();
+    }

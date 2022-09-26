@@ -1,0 +1,63 @@
+.context-container.hidden#turnout(style=`position:absolute; left:0; top:0; width: ${blockSize}px; height: ${blockSize}px;`)
+  img(oncontextmenu='return false;')
+
+script(type='text/javascript').
+  class Turnout {
+    id
+    segmentid
+    x
+    y
+    panel = null
+    index = null
+    type = null
+    state = false
+
+    constructor(id, segmentid, x, y, panel, index, type, state)
+    {
+      this.id = id
+      this.segmentid = segmentid
+      this.x = x
+      this.y = y
+      this.panel = panel
+      this.index = index
+      this.type = type
+      this.state = state
+      elements[this.id] = this
+
+      const jelement = $('#turnout').clone()
+        .attr('id', 'element' + this.id)
+        .css('left', this.x * blockSize)
+        .css('top', this.y * blockSize)
+        .css('cursor', 'pointer')
+        .css('z-index', 1)
+        .removeClass('hidden')
+        .appendTo("#bg")
+
+      this.displayTurnoutState(this.state)
+
+      jelement.on('click', () => {
+        doAction(this.segmentid, `turnout/${this.panel + 1}/toggle/${this.index + 1}`)
+      })
+    }
+
+    element() { return $(`#element${this.id}`) }
+
+    displayTurnoutState(state)
+    {
+      this.element()
+        .find('img')
+        .attr('src', state === undefined ? `/glyph/turnout/${this.type}` : `/glyph/turnout/${this.type}/${state ? '1': '0'}`)
+    }
+
+    processEvent(segmentid, panelid, event, eventdata)
+    {
+      if (segmentid !== this.segmentid) return
+      if (panelid !== `turnout${this.panel + 1}`) return 
+
+      if (eventdata && eventdata.length == 2 && eventdata[0] == this.index)
+      {
+        this.state = eventdata[1];
+        this.displayTurnoutState(this.state)
+      }
+    }
+  }

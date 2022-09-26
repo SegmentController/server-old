@@ -1,0 +1,294 @@
+script(type='text/javascript').
+
+  let isCtrlDown = false
+  let isShiftDown = false
+  let isMouseLeftDown = false
+  let isMouseRightDown = false
+  $(document).on('keyup keydown', function(e){ isCtrlDown = e.ctrlKey });
+  $(document).on('keyup keydown', function(e){ isShiftDown = e.shiftKey });
+
+  let mouseMovePos = { x: 0, y: 0 }
+  let mouseLeftDownPos = { x: 0, y: 0 }
+  let mouseRightDownPos = { x: 0, y: 0 }
+
+  function isSelectionRect()
+  {
+    const { lefttop, bottomright } = getSelectionRect()
+    return lefttop.x < bottomright.x && lefttop.y < bottomright.y
+  }
+
+  function getSelectionRect()
+  {
+    const lefttop = { x: mouseLeftDownPos.x, y: mouseLeftDownPos.y }
+    const bottomright = { x: mouseMovePos.x, y: mouseMovePos.y }
+
+    if (bottomright.x < lefttop.x)
+    {
+      const x = bottomright.x
+      bottomright.x = lefttop.x
+      lefttop.x = x
+    }
+    if (bottomright.y < lefttop.y)
+    {
+      const y = bottomright.y
+      bottomright.y = lefttop.y
+      lefttop.y = y
+    }
+
+    return { lefttop, bottomright }
+  }
+
+  function redrawSelectionRect()
+  {
+    const { lefttop, bottomright } = getSelectionRect()
+
+    $('#selectregion').css({
+      left: lefttop.x * blockSize,
+      top: topMargin + lefttop.y * blockSize,
+      width: (bottomright.x - lefttop.x) * blockSize,
+      height: (bottomright.y - lefttop.y) * blockSize,
+    })
+
+    $('#selectregion').show()
+  }
+
+  function selectBySelectionRect()
+  {
+    const { lefttop, bottomright } = getSelectionRect()
+
+    for(const element of $('#elementscontainer').children())
+      if ($(element) && $(element).data('id'))
+        if ($(element).is(":visible"))
+        {
+          const id = $(element).data('id')
+          if (id && elements[id] && elements[id].isOverLap)
+            if (elements[id].isOverLap(lefttop.x, lefttop.y, bottomright.x - 1, bottomright.y - 1))
+              $(element).addClass('elementselected')
+        }
+    updateSelectionDisplay()
+  }
+
+  $('#elementscontainer').on('mousedown', function(event)
+  {
+    switch(event.button)
+    {
+      case 0:
+        isMouseLeftDown = true
+        e = event || window.event;	
+        mouseLeftDownPos = { x: Math.floor(e.clientX / blockSize), y: Math.floor((e.clientY - topMargin) / blockSize) };
+        if (cursorCallback)
+          cursorCallback(mouseMovePos.x, mouseMovePos.y, cursorCallbackParams)
+        else
+          if (!isCtrlDown)
+            clearSelection()
+        break;
+      case 2:
+        isMouseRightDown = true
+        e = event || window.event;	
+        mouseRightDownPos = { x: Math.round(e.clientX / blockSize), y: Math.round((e.clientY - topMargin) / blockSize) };
+        clearSelection()
+        setCursor()
+        break;
+    }
+  })
+
+  $('#elementscontainer').on('mousemove', function(event) 
+  {
+    e = event || window.event;	
+    mouseMovePos = { x: Math.floor(e.clientX / blockSize), y: Math.floor((e.clientY - topMargin) / blockSize) };
+
+    if (isMouseLeftDown && isShiftDown)
+      redrawSelectionRect()
+  })
+
+  $('#elementscontainer').on('mouseup', function(event)
+  {
+    switch(event.button)
+    {
+      case 0:
+        isMouseLeftDown = false
+        if (isShiftDown)
+          selectBySelectionRect()
+        $('#selectregion').hide()
+        break;
+      case 2:
+        isMouseRightDown = false
+        break;
+    }
+  })
+
+  window.addEventListener("keydown", function (event) {
+    if (event.defaultPrevented) return
+
+    switch(event.key)
+    {
+      case ' ':
+        if (cursorCallback)
+        {
+          cursorCallback(mouseMovePos.x, mouseMovePos.y, cursorCallbackParams)
+          event.preventDefault()
+        }
+        break;
+      case 'Backspace':
+        if (lastElements.length && cursorCallback)
+        {
+
+          const last = lastElements.pop()
+          if (last)
+            last.remove()
+          event.preventDefault()
+        }
+        break;
+      case 'Esc':
+      case 'Escape':
+        clearSelection()
+        setCursor()
+        event.preventDefault()
+        break;
+    }
+
+    const selections =  getSelection()
+    if (selections.length == 0) return 
+    const ids = []
+    for(const selection of selections)
+      if ($(selection) && $(selection).data('id'))
+        ids.push($(selection).data('id'))
+
+    switch (event.key) {
+      case "Down": 
+      case "ArrowDown":
+        for(const id of ids)
+          elements[id].moveDown()
+        event.preventDefault();
+        break;
+      case "Up": 
+      case "ArrowUp":
+        let allowup = true
+        for(const id of ids)
+          if (!elements[id].canMoveUp())
+          {
+            allowup = false 
+            break
+          }
+        if (allowup)
+          for(const id of ids)
+            elements[id].moveUp()
+        event.preventDefault();
+        break;
+      case "Left": 
+      case "ArrowLeft":
+        let allowleft = true
+        for(const id of ids)
+          if (!elements[id].canMoveLeft())
+          {
+            allowleft = false 
+            break
+          }
+        if (allowleft)
+          for(const id of ids)
+            elements[id].moveLeft()
+        event.preventDefault();
+        break;
+      case "Right": 
+      case "ArrowRight":
+        for(const id of ids)
+          elements[id].moveRight()
+        event.preventDefault();
+        break;
+      default:
+        return;
+    }
+  }, true);
+
+  $('html').on('contextmenu', function () {
+    $('.context-menu').hide();
+    return false
+  })
+  initContextMenus('.segmentelement')
+
+  hotkeys('r,shift+r', function(event, handler)
+  {
+    const selections =  getSelection()
+    if (selections.length == 0) return 
+    for(const selection of selections)
+    {
+      const rotateId = $(selection).data('id')
+      if (rotateId in elements && elements[rotateId] && elements[rotateId].rotate)
+        elements[rotateId].rotate(handler.key == 'shift+r')
+    }
+    event.preventDefault()
+  });
+  hotkeys('ctrl+c', function(event, handler)
+  {
+    const selections =  getSelection()
+    if (selections.length == 1)
+    {
+      const copyId = $(selections[0]).data('id')
+      if (copyId in elements && elements[copyId] && elements[copyId].setCopyCursor)
+        elements[copyId].setCopyCursor()
+    }
+    event.preventDefault()
+  });
+  hotkeys('del', function(event, handler)
+  {
+    const selections =  getSelection()
+    if (selections.length == 0) return 
+    for(const selection of selections)
+    {
+      const deleteId = $(selection).data('id')
+      if (deleteId in elements && elements[deleteId])
+        elements[deleteId].remove()
+    }
+    event.preventDefault()
+  });
+  hotkeys('ctrl+a', function(event)
+  {
+    $('#elementscontainer').children().toggleClass('elementselected')
+    updateSelectionDisplay()
+    event.preventDefault()
+  });
+  hotkeys('shift+a', function(event)
+  {
+    $('#elementscontainer').children('.trackhide').toggleClass('elementselected')
+    updateSelectionDisplay()
+    event.preventDefault()
+  });
+  hotkeys('shift+t', function(event)
+  {
+    $('.trackhide').fadeToggle('fast')
+    updateSelectionDisplay()
+    event.preventDefault()
+  });
+  hotkeys('shift+l', function(event)
+  {
+    $('.signalhide').fadeToggle('fast')
+    updateSelectionDisplay()
+    event.preventDefault()
+  });
+  hotkeys('shift+s', function(event)
+  {
+    $('.surfacehide').fadeToggle('fast')
+    updateSelectionDisplay()
+    event.preventDefault()
+  });
+  hotkeys('shift+h', function(event){ toggleHelp() })
+  function showHelp()
+  {
+    $("#help").fadeIn()
+    setTimeout(() => $("#help").fadeOut(), 30 * 1000)
+    localStorage.setItem('hideSegmentHelp', false)
+  }
+  function hideHelp()
+  {
+    $("#help").fadeOut()
+    localStorage.setItem('hideSegmentHelp', true)
+  }
+  function toggleHelp()
+  {
+    if($("#help").is(":visible"))
+      hideHelp()
+    else
+      showHelp()
+  }
+  if (localStorage.getItem('hideSegmentHelp') != 'true')
+    showHelp()

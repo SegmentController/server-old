@@ -1,0 +1,501 @@
+extends ../_base
+
+block content
+
+  .card#help.hidden.noselect(style=`position: absolute; width: 32rem; top: ${topMargin + 16}px; right: 16px; z-index: 100`, onclick='hideHelp()')
+    .card-body
+      h6.card-title
+        i.bi.bi-keyboard
+        | 
+        | Segment editor shortcuts
+      p.card-text
+        small
+          | Many functions are available with keyboard shortcuts.
+        include segment/hotkeys.pug
+
+  nav.navbar.navbar-expand-lg.navbar-light.bg-light.fixed-top.noselect(style=`height: ${topMargin}px`)
+    .container-fluid
+      .navbar-brand
+        img(src='/public/favicon/favicon-32x32.png')
+        | Segment
+        |
+        b
+          = segment.name
+        |
+        | #
+        = segment.id
+
+      .collapse.navbar-collapse
+        ul.navbar-nav.me-auto.mb-2.mb-lg-0
+
+          li.nav-item
+            a.btn.btn-secondary.active(href='/editor/layout')
+              i.bi.bi-arrow-left-circle
+              | 
+              | Layout
+
+          li.nav-item.ms-5
+            a.nav-link(href='#' style="transform: rotate(-90deg)" onclick="setCursor()")
+              i.bi.bi-cursor-fill
+
+          li.nav-item.dropdown.dropdown-instant.ms-2
+            a.nav-link(href='#' role='button' data-bs-toggle='dropdown')
+              img(src=`/glyph/track/${firsttracktype}` width='24px')
+              | 
+              | Track
+            ul.dropdown-menu
+              each tracktypename, tracktype in tracktypegroups
+                if (global.isObject(tracktypegroups[tracktype]))
+                  li.nav-item.dropdown.dropdown-instant.dropend
+                    a.dropdown-toggle.dropdown-item(href='#' role='button' data-bs-toggle='dropdown')
+                      = tracktype
+                      | 
+                    ul.dropdown-menu.dropend
+                      each tracksubtypename, tracksubtype in tracktypegroups[tracktype]
+                        li
+                          a.dropdown-item(href='#' onclick=`setCursor('/glyph/track/${tracksubtype}', cursorCreateTrack, { type: '${tracksubtype}'})`)
+                            img(src=`/glyph/track/${tracksubtype}` width='16px')
+                            | 
+                            = tracksubtypename
+                else
+                  li
+                    a.dropdown-item(href='#' onclick=`setCursor('/glyph/track/${tracktype}', cursorCreateTrack, { type: '${tracktype}'})`)
+                      img(src=`/glyph/track/${tracktype}` width='16px')
+                      | 
+                      = tracktypename
+              li
+                hr.dropdown-divider
+              li
+                a.dropdown-item(href='#' onclick=`$('.trackhide').fadeToggle('fast'); updateSelectionDisplay(true)`) Show/hide all
+
+          li.nav-item.dropdown.dropdown-instant.ms-2
+            a.nav-link(href='#' role='button' data-bs-toggle='dropdown')
+              img(src=`/glyph/turnout/${firstturnouttype}` width='24px')
+              | 
+              | Turnout
+            ul.dropdown-menu
+              each turnouttypename, turnouttype in turnouttypegroups
+                if (global.isObject(turnouttypegroups[turnouttype]))
+                  li.nav-item.dropdown.dropdown-instant.dropend
+                    a.dropdown-toggle.dropdown-item(href='#' role='button' data-bs-toggle='dropdown')
+                      = turnouttype
+                      | 
+                    ul.dropdown-menu.dropend
+                      each turnoutsubtypename, turnoutsubtype in turnouttypegroups[turnouttype]
+                        li
+                          a.dropdown-item(href='#' onclick=`setCursor('/glyph/turnout/${turnoutsubtype}', cursorCreateTurnout, { type: '${turnoutsubtype}'})`)
+                            img(src=`/glyph/turnout/${turnoutsubtype}` width='16px')
+                            | 
+                            = turnoutsubtypename
+                else
+                  li
+                    a.dropdown-item(href='#' onclick=`setCursor('/glyph/turnout/${turnouttype}', cursorCreateTurnout, { type: '${turnouttype}'})`)
+                      img(src=`/glyph/turnout/${turnouttype}` width='16px')
+                      | 
+                      = turnouttypename
+              li
+                hr.dropdown-divider
+              li
+                a.dropdown-item(href='#' onclick=`$('.trackhide').fadeToggle('fast'); updateSelectionDisplay(true)`) Show/hide all
+
+          li.nav-item.dropdown.dropdown-instant.ms-2
+            a.nav-link(href='#' role='button' data-bs-toggle='dropdown')
+              img(src=`/glyph/signal/${firstsignaltype}/GYR` width='24px')
+              | 
+              | Signals
+            ul.dropdown-menu
+              each signaltypename, signaltype in signaltypes
+                li
+                  a.dropdown-item(href='#' onclick=`setCursor('/glyph/signal/${signaltype}/GYR', cursorCreateSignal, { type: '${signaltype}', bulbs: 'GYR' })`)
+                    img(src=`/glyph/signal/${signaltype}/GYR` width='16px')
+                    | 
+                    = signaltypename
+              li
+                hr.dropdown-divider
+              li
+                a.dropdown-item(href='#' onclick=`$('.signalhide').fadeToggle('fast'); updateSelectionDisplay(true)`) Show/hide all
+
+          li.nav-item.dropdown.dropdown-instant.ms-2
+            a.nav-link.dropdown-toggleX(href='#' role='button' data-bs-toggle='dropdown')
+              span#lastsurfacecolor.lastsurfacecolor(style='display: inline-block; width:24px; height:24px; background-color: #40c020')
+                | &nbsp;
+              | 
+              | Surface
+            ul.dropdown-menu
+              each size in [1,2,3,4]
+                li
+                  a.dropdown-item(href='#' onclick=`const color = $('#lastsurfacecolor').css('background-color'); setCursor('/glyph/surface?size=' + (${blockSize} * ${size}) + '&color=' + rgb2hex(color, false), cursorCreateSurface, { size: ${size}, color: rgb2hex(color, true) })`)
+                    span.lastsurfacecolor(style='display: inline-block; width:16px; height:16px; background-color: #40c020')
+                    | 
+                    = size
+                    | x
+                    = size
+
+              if predefinedSurfaceColors
+                li.nav-item.dropdown.dropdown-instant.dropend
+                  a.dropdown-toggle.dropdown-item(href='#' role='button' data-bs-toggle='dropdown')
+                    | Predefined colors
+                    | 
+                  ul.dropdown-menu.dropend
+                    each value,key in predefinedSurfaceColors
+                      li
+                        a.dropdown-item(href='#' onclick=`$('.lastsurfacecolor').css('background-color', '${key}');`)
+                          span(style='display: inline-block; width:16px; height:16px; background-color: ' + key)
+                          | 
+                          = value
+
+              if usedSurfaceColors
+                li.nav-item.dropdown.dropdown-instant.dropend
+                  a.dropdown-toggle.dropdown-item(href='#' role='button' data-bs-toggle='dropdown')
+                    | Used colors
+                    | 
+                  ul.dropdown-menu.dropend
+                    each value,key in usedSurfaceColors
+                      li
+                        a.dropdown-item(href='#' onclick=`$('.lastsurfacecolor').css('background-color', '${key}');`)
+                          span(style='display: inline-block; width:16px; height:16px; background-color: ' + key)
+                          | 
+                          = value
+              li
+                hr.dropdown-divider
+              li
+                a.dropdown-item(href='#' onclick=`$('.surfacehide').fadeToggle('fast'); updateSelectionDisplay(true)`) Show/hide all
+
+          li.nav-item.dropdown.dropdown-instant.ms-2
+            a.nav-link(href='#' role='button' data-bs-toggle='dropdown')
+              img(src=`/glyph/accessories/sound/1` width='24px')
+              | 
+              | Accessories
+            ul.dropdown-menu
+              li
+                a.dropdown-item(href='#' onclick=`setCursor('/glyph/accessories/button?color=aaa', cursorCreateButton, { color: '#aaa' })`)
+                  img(src=`/glyph/accessories/button?color=aaa` width='16px')
+                  | 
+                  | Action button
+              li
+                a.dropdown-item(href='#' onclick=`setCursor('/glyph/accessories/light/1', cursorCreateAmbientLight, { })`)
+                  img(src=`/glyph/accessories/light/1` width='16px')
+                  | 
+                  | Ambient light & effect
+              li
+                a.dropdown-item(href='#' onclick=`setCursor('/glyph/accessories/sound/1', cursorCreateSound, { })`)
+                  img(src=`/glyph/accessories/sound/1` width='16px')
+                  | 
+                  | Sound
+              li
+                hr.dropdown-divider
+              li
+                a.dropdown-item(href='#' onclick=`$('.accessorieshide').fadeToggle('fast'); updateSelectionDisplay(true)`) Show/hide all
+
+          li.nav-item.elementselected.small.hidden#selectionindicator
+            a.nav-link(href='#')
+              b#selectioncount
+                | 0
+              |
+              | selected
+
+        ul.navbar-nav.ms-auto.mb-2.mb-lg-0
+          li#panelsave.nav-item.hidden
+            a#buttonsave.btn.btn-warning(href='#' onclick='saveSegmentElements(true)' title='CTRL+S')
+              | Save segment
+
+          li.nav-item.dropdown.dropstart#connectedlist
+            a.nav-link(href='#' role='button' data-bs-toggle='dropdown')
+              i.bi.bi-link-45deg
+            ul.dropdown-menu#connecteditems
+              li
+                a.dropdown-item(href='#' onclick="setBaseColor()")
+                  | Base color
+                  | (
+                  = segment.baseColor
+                  | )
+
+          li.nav-item.dropdown.dropstart
+            a.nav-link(href='#' role='button' data-bs-toggle='dropdown')
+              i.bi.bi-gear-fill
+            ul.dropdown-menu
+              li
+                a.dropdown-item(href='#' onclick="setBaseColor()")
+                  | Base color
+                  | (
+                  = segment.baseColor
+                  | )
+
+          li.nav-item
+            a.nav-link(href='#' onclick='toggleHelp()')
+              i.bi.bi-question-circle-fill
+
+
+  #elementscontainer.noselect(style='min-height: 100vh')
+    .hidden#selectregion
+    .segmentelement.trackhide.hidden#track(style=`position:absolute; left:0; top:0; width: ${blockSize}px; height: ${blockSize}px;`)
+      img
+      ul.dropdown-menu.context-menu
+        li
+          a.dropdown-item.text-danger(href='#' onclick='removeMyElement(this)')
+            | Delete
+    .segmentelement.trackhide.hidden#turnout(style=`position:absolute; left:0; top:0; width: ${blockSize}px; height: ${blockSize}px;` title='')
+      img
+      ul.dropdown-menu.context-menu
+        li
+          a.dropdown-item(href='#' onclick='callMyElementMethod(this, "inputSetPanel")')
+            | Connect to panel
+        li
+          hr.dropdown-divider
+        li
+          a.dropdown-item.text-danger(href='#' onclick='removeMyElement(this)')
+            | Delete
+    .segmentelement.signalhide.hidden#signal(style=`position:absolute; left:0; top:0; width: ${blockSize}px; height: ${blockSize}px;` title='')
+      img
+      ul.dropdown-menu.context-menu
+        li
+          a.dropdown-item(href='#' onclick='callMyElementMethod(this, "inputSetBulbs")')
+            | Set bulbs
+        li
+          a.dropdown-item(href='#' onclick='callMyElementMethod(this, "inputSetPanel")')
+            | Connect to panel
+        li
+          hr.dropdown-divider
+        li
+          a.dropdown-item.text-danger(href='#' onclick='removeMyElement(this)')
+            | Delete
+    .segmentelement.surfacehide.hidden#surface(style=`position:absolute; left:0; top:0; width: ${blockSize}px; height: ${blockSize}px)`)
+      span.design.d-flex(style="position:absolute;").small.fw-bold
+        |
+      span.text.d-flex.align-items-center.justify-content-center(style="height:100%;").small
+        |
+      ul.dropdown-menu.context-menu
+        li
+          a.dropdown-item(href='#' onclick='callMyElementMethod(this, "inputSetColor")')
+            | Set color
+        li
+          a.dropdown-item(href='#' onclick='callMyElementMethod(this, "inputSetText")')
+            | Set text
+        li
+          hr.dropdown-divider
+        li
+          a.dropdown-item.text-danger(href='#' onclick='removeMyElement(this)')
+            | Delete
+    .segmentelement.accessorieshide.hidden#button(style=`position:absolute; left:0; top:0; width: ${blockSize}px; height: ${blockSize}px;` title='')
+      img
+      ul.dropdown-menu.context-menu
+        li
+          a.dropdown-item(href='#' onclick='callMyElementMethod(this, "inputSetName")')
+            | Set name
+        li
+          a.dropdown-item(href='#' onclick='callMyElementMethod(this, "inputSetColor")')
+            | Set color
+        li
+          hr.dropdown-divider
+        li
+          a.dropdown-item.text-danger(href='#' onclick='removeMyElement(this)')
+            | Delete
+    .segmentelement.accessorieshide.hidden#ambientlight(style=`position:absolute; left:0; top:0; width: ${blockSize}px; height: ${blockSize}px;` title='')
+      img
+      ul.dropdown-menu.context-menu
+        li
+          a.dropdown-item(href='#' onclick='callMyElementMethod(this, "inputSetPanel")')
+            | Connect to panel
+        li
+          hr.dropdown-divider
+        li
+          a.dropdown-item.text-danger(href='#' onclick='removeMyElement(this)')
+            | Delete
+    .segmentelement.accessorieshide.hidden#sound(style=`position:absolute; left:0; top:0; width: ${blockSize}px; height: ${blockSize}px;` title='')
+      img
+      ul.dropdown-menu.context-menu
+        li
+          a.dropdown-item(href='#' onclick='callMyElementMethod(this, "inputSetSound")')
+            | Connect to sound
+        li
+          hr.dropdown-divider
+        li
+          a.dropdown-item.text-danger(href='#' onclick='removeMyElement(this)')
+            | Delete
+
+  style.
+    .elementselected {
+      outline-width: 1px;
+      outline-style: dashed;
+      outline-color: `${invertBgColor}`;
+    }
+    .elementwarning {
+      outline-width: 1px;
+      outline-style: solid;
+      outline-color: orange;
+    }
+    .elementerror {
+      outline-width: 1px;
+      outline-style: solid;
+      outline-color: red;
+    }
+    #selectregion {
+      border: 1px dotted #111;
+      position: absolute;
+      z-index: 100;
+    }
+    .context-menu {
+      z-index: 50;
+    }
+    .trackhide{
+      border: 1px solid rgba(127, 127, 127, 0.5);
+    }
+
+  script(src='/assets/interactjs/interact.min.js?' + APPVERSION)
+  script(type='text/javascript').
+    const topMargin = #{topMargin}
+    const blockSize = #{blockSize}
+
+  include segment/elements.js.pug
+  
+  include segment/elements/surface.js.pug
+  include segment/elements/track.js.pug
+  include segment/elements/turnout.js.pug
+  include segment/elements/signal.js.pug
+
+  include segment/accessories/button.js.pug
+  include segment/accessories/ambientLight.js.pug
+  include segment/accessories/sound.js.pug
+  
+  include segment/save.js.pug
+  include segment/hotkeys.js.pug
+
+  script(type='text/javascript')
+    | $(function() {
+    |
+    | initializationState = true
+    | 
+    each surface in segment.surfaces
+      |  new Surface(
+      = surface.x
+      |, 
+      = surface.y
+      |, 
+      = surface.width
+      |, 
+      = surface.height
+      |, '
+      = surface.color
+      |'
+      |, '
+      = surface.text
+      |');
+      |
+    |
+    each track in segment.tracks
+      |  new Track(
+      = track.x
+      |, 
+      = track.y
+      |, '
+      = track.type
+      |');
+      |
+    |
+    each turnout in segment.turnouts
+      |  new Turnout(
+      = turnout.x
+      |, 
+      = turnout.y
+      |, 
+      = turnout.panel
+      |, 
+      = turnout.index
+      |, '
+      = turnout.type
+      |');
+      |
+    |
+    each signal in segment.signals
+      |  new Signal(
+      = signal.x
+      |, 
+      = signal.y
+      |, 
+      = signal.panel
+      |, 
+      = signal.index
+      |, '
+      = signal.type
+      |', '
+      = signal.bulbs
+      |');
+      |
+    |
+    each button in segment.buttons
+      |  new Button(
+      = button.x
+      |, 
+      = button.y
+      |, '
+      = button.name
+      |', '
+      = button.color
+      |');
+      |
+    |
+    each light in segment.ambientLights
+      |  new AmbientLight(
+      = light.x
+      |, 
+      = light.y
+      |, 
+      = light.panel
+      |, 
+      = light.index
+      |);
+      |
+    |
+    each sound in segment.sounds
+      |  new Sound(
+      = sound.x
+      |, 
+      = sound.y
+      |, 
+      = sound.index
+      |);
+      |
+    |
+    | detectErrors()
+    | initializationState = false
+    | lastElements = []
+    |
+    | })
+
+  script(type='text/javascript').
+    $(function()
+    {
+      $('#connectedlist').on('show.bs.dropdown', function () {
+        $('#connecteditems').empty()
+
+        conns = []
+        for(const id in elements)
+          if (elements[id].getConnectionInfo)
+            conns.push({ id: id, name: elements[id].getConnectionInfo() })
+        conns.sort((a, b) => ('' + a.name).localeCompare('' + b.name))
+        if (conns.length)
+          for(const conn of conns)
+            $('#connecteditems').append(`<li><a class="dropdown-item" href="#" onclick="setSelectionById(${conn.id})">${conn.name}</a></li>`)
+        else
+          $('#connecteditems').append(`<li><h6 class="dropdown-header">No item with connection</h6></li>`)
+      })
+    })
+
+    async function setBaseColor()
+    {
+      const { value: baseColor } = await Swal.fire({
+        title: 'Color of plate (background)',
+        showCancelButton: true,
+        preConfirm: () => { return document.getElementById('html5colorpicker').value },
+        html: '<input type="color" id="html5colorpicker" value="#{segment.baseColor}" style="width:50%">' 
+      })
+
+      if (baseColor)
+        $.post('/editor/segment/#{segment.id}/set/baseColor', { baseColor: baseColor })
+          .done(function() { 
+            pagereload()
+          })
+          .fail(function(xhr, status, error) {
+            ToastError.fire({ html: `<b>Error</b><br/>${xhr.responseText}` })
+          })
+    }

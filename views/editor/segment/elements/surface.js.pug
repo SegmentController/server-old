@@ -1,0 +1,238 @@
+script(type='text/javascript').
+  function cursorCreateSurface(x, y, params)
+  {
+    new Surface(x, y, params.size, params.size, params.color)
+    needSaveSegmentElements()
+  }
+
+  class Surface {
+    id
+    x
+    y
+    w
+    h
+    color
+    text
+    constructor(x, y, w, h, color, text)
+    {
+      elementid++
+      this.id = elementid
+      elements[this.id] = this
+      addElementToUndoQueue(this)
+      this.x = x
+      this.y = y
+      this.w = w
+      this.h = h
+
+      const jelement = $("#surface")
+        .clone()
+        .attr('id', 'element' + this.id)
+        .data('id', this.id)
+        .css('left', x * blockSize)
+        .css('top', y * blockSize + topMargin)
+        .css('width', w * blockSize)
+        .css('height', h * blockSize)
+        .css('z-index', 0)
+        .insertAfter("#surface")
+        .removeClass('hidden')
+
+      this.setColor(color)
+      this.setText(text)
+
+      const that = this
+
+      jelement.on('click', () => {
+        if (!isCtrlDown) clearSelection()
+        jelement.addClass('elementselected')
+        updateSelectionDisplay()
+        return false
+      })
+
+      const moveDelta = { x: 0, y: 0 }
+      const sizeDelta = { x: 0, y: 0 }
+      interact(document.getElementById('element' + this.id))
+        .draggable({
+          listeners: {
+            start (event) {
+              moveDelta.x = 0
+              moveDelta.y = 0
+              stopAutosaveTimer()
+              if (!isCtrlDown) clearSelection()
+              jelement.addClass('elementselected')
+              updateSelectionDisplay()
+            },
+            move (event) {
+              moveDelta.x += event.dx
+              moveDelta.y += event.dy
+              event.target.style.left = `${that.x * blockSize + moveDelta.x}px`
+              event.target.style.top = `${that.y * blockSize + topMargin + moveDelta.y}px`
+              $(event.target).children('span.design').text(Math.round(that.x + moveDelta.x / blockSize) + ',' + Math.round(that.y + moveDelta.y / blockSize))
+            },
+            end (event) {
+              that.setPos(jelement.offset().left / blockSize, (jelement.offset().top - topMargin) / blockSize)
+              $(event.target).children('span.design').text('')
+            },
+          },
+          modifiers: [
+            interact.modifiers.snap({
+              targets: [
+                interact.snappers.grid({ x: blockSize, y: blockSize })
+              ],
+              relativePoints: [ { x: 0, y: 0 } ]
+            }),
+            interact.modifiers.restrictRect({
+              restriction: { x: 0, y: topMargin, width: 10000, height: 10000 },
+              endOnly: false
+            })
+          ]
+        })
+        .draggable(interactsEnabled)
+        .resizable({
+          edges: { left: true, right: true, bottom: true, top: true },
+          listeners: {
+            start(event) {
+              sizeDelta.x = 0
+              sizeDelta.y = 0
+              stopAutosaveTimer()
+            },
+            move (event) {
+              sizeDelta.x += event.deltaRect.left
+              sizeDelta.y += event.deltaRect.top
+
+              event.target.style.width = `${event.rect.width}px`
+              event.target.style.height = `${event.rect.height}px`
+
+
+              event.target.style.left = `${that.x * blockSize + sizeDelta.x}px`
+              event.target.style.top = `${that.y * blockSize + topMargin + sizeDelta.y}px`
+
+              $(event.target).children('span.design').text(Math.round(event.rect.width / blockSize) + '\u00D7' + Math.round(event.rect.height / blockSize))
+            },
+            end (event) {
+              that.setPos(jelement.offset().left / blockSize, (jelement.offset().top - topMargin) / blockSize)
+              that.setSize(jelement.width() / blockSize, jelement.height() / blockSize)
+              $(event.target).children('span.design').text('')
+            }
+          },
+          modifiers: [
+            interact.modifiers.snap({
+              targets: [
+                interact.snappers.grid({ x: blockSize, y: blockSize })
+              ],
+              relativePoints: [ { x: 0, y: 0 } ]
+            }),
+            interact.modifiers.restrictEdges({ outer: 'parent' }),
+            interact.modifiers.restrictSize({ min: { width: blockSize, height: blockSize } })
+          ],
+          inertia: true
+        })
+        .resizable(interactsEnabled)
+      }
+
+      enableInteract(enable) { interact(document.getElementById('element' + this.id)).draggable(enable).resizable(enable) }
+
+      element() { return $(`#element${this.id}`) }
+
+      setColor(color)
+      {
+        this.color = color
+        this.element()
+          .css('background-color', this.color)
+      }
+
+      setText(text)
+      {
+        this.text = text
+        this.element()
+          .find('span.text')
+          .text(text)
+      }
+
+      containsPoint(x, y) { return this.x >= x && this.x + this.w <= x && this.y >= y && this.y + this.h <= y}
+      isOverLap(x1, y1, x2, y2)
+      {
+        const overlapx = x1.between(this.x, this.x + this.w) || x2.between(this.x, this.x + this.w) || this.x.between(x1, x2) || (this.x + this.w).between(x1, x2)
+        const overlapy = y1.between(this.y, this.y + this.h) || y2.between(this.y, this.y + this.h) || this.y.between(y1, y2) || (this.y + this.h).between(y1, y2)
+        return overlapx && overlapy
+      }
+
+      canMoveLeft() { return this.x > 0 }
+      canMoveUp() { return this.y > 0 }
+
+      moveLeft() { this.setPos(this.x - 1, this.y) }
+      moveRight() { this.setPos(this.x + 1, this.y) }
+      moveUp() { this.setPos(this.x, this.y - 1) }
+      moveDown() { this.setPos(this.x, this.y +1 ) }
+
+      setPos(x, y)
+      {
+        if (x < 0 || y < 0) return
+        this.x = x
+        this.y = y
+
+        this.element()
+          .css('left', this.x * blockSize)
+          .css('top', this.y * blockSize + topMargin)
+        needSaveSegmentElements()
+      }
+
+      setSize(w, h)
+      {
+        if (w <= 0 || h <= 0) return
+        this.w = w
+        this.h = h
+
+        this.element()
+          .css('width', this.w * blockSize)
+          .css('height', this.h * blockSize)
+        needSaveSegmentElements()
+      }
+
+      rotate() { this.setSize(this.h, this.w) }
+
+      remove()
+      {
+        if (this.id in elements)
+          delete elements[this.id]
+        this.element().remove()
+        needSaveSegmentElements()
+      }
+
+      setCopyCursor() { setCursor('/glyph/surface?size='+ blockSize + '&color=' + this.color, cursorCreateSurface, { size: 1, color: this.color }) }
+
+      getSaveData() { return { class: 'surface', x: this.x, y: this.y, w: this.w, h: this.h, color: this.color, text: this.text } }
+
+      async inputSetColor()
+      {
+        const { value: newColor } = await Swal.fire({
+          title: 'Color of surface',
+          showCancelButton: true,
+          backdrop: false,
+          preConfirm: () => { return document.getElementById('html5colorpicker').value },
+          html: '<input type="color" id="html5colorpicker" value="' + this.color + '" style="width:50%">' 
+        })
+
+        if (newColor)
+        {
+          this.setColor(newColor)
+          $('.lastsurfacecolor').css('background-color', newColor)
+          return true
+        }
+      }
+
+      async inputSetText()
+      {
+        const { value: newTitle } = await Swal.fire({
+          title: 'Title of surface',
+          input: 'text',
+          inputValue: this.text || '',
+          showCancelButton: true,
+        })
+
+        if (newTitle !== undefined)
+        {
+          this.setText(newTitle)
+          return true
+        }
+      }
+  }

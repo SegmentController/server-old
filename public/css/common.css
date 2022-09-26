@@ -1,0 +1,59 @@
+.hidden {
+  display: none
+}
+
+.noselect {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.opacity75 {
+  opacity: 0.75;
+}
+
+.opacity75:hover {
+  opacity: 1;
+}
+
+.ws-indicator {
+  color: red;
+  display: inline;
+}
+
+.ws-indicator.online {
+  color: yellowgreen;
+  display: none;
+}
+
+.swal-codeeditor {
+  height: 90vh;
+}
+
+.codeeditor-code {
+  font-family: Consolas, Lucida Console, monospace;
+  resize: none;
+  min-height: 50px;
+  max-height: 50vh;
+}
+
+.codeeditor-help {
+  font-family: Consolas, Lucida Console, monospace;
+}
+
+.codeeditor-success-error {
+  font-family: Consolas, Lucida Console, monospace;
+  padding-top: 10px;
+  font-weight: bold;
+}
+
+.codeeditor-success {
+  color: green;
+}
+
+.codeeditor-error {
+  color: orange;
+}

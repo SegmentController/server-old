@@ -1,0 +1,32 @@
+extends ../_base
+
+block content
+
+  br
+  center
+    h4 
+      = title
+      small
+        | 
+        | (
+        = blockSize
+        | px)
+    br
+    each type in glyphs
+      dl.row(style='width:500px')
+        dt.col-sm-8
+          = type.name 
+          if (type.type)
+            | 
+            small
+              br
+              | (
+              = type.type
+              | )
+        dd.col-sm-4
+          img(src=type.url style='padding:2px')
+          if (type.url2)
+            img(src=type.url2 style='padding:2px')
+          if (type.url3)
+            img(src=type.url3 style='padding:2px')
+      br

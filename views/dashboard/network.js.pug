@@ -1,0 +1,22 @@
+script(type='text/javascript').
+    function shownetworkinfo()
+    {
+        $.get("/network/show", function(html) {
+            Swal.fire({
+                width: '80%',
+                title: 'Segment network',
+                html: html,
+            })
+        })
+        .fail(function() {
+            ToastError.fire({ title: 'Error occured' })
+        })
+    }
+
+    function rebootcontroller(id)
+    {
+        $.post("/network/reboot", { id: id })
+        .fail(function(response) {
+            ToastError.fire({ title: 'Error occured', text: response.responseText })
+        })
+    }

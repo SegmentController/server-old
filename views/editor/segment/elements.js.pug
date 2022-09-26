@@ -1,0 +1,79 @@
+script(type='text/javascript').
+  let elementid = 0
+  const elements = {}
+
+  interactsEnabled = true
+  function enableAllInteracts(enable)
+  {
+    for(const element in elements)
+      if (elements[element])
+        elements[element].enableInteract(enable)
+    interactsEnabled = enable
+  }
+
+  let cursorCallback
+  let cursorCallbackParams
+  function setCursor(glyphurl, callback, params)
+  {
+    if (glyphurl)
+    {
+      enableAllInteracts(false)
+      $('html').css('cursor', `url("${glyphurl}") 16 16, auto`);
+    }
+    else
+    {
+      enableAllInteracts(true)
+      $('html').css('cursor', 'auto');
+    }
+
+    cursorCallback = callback
+    cursorCallbackParams = params
+  }
+
+  function removeElementById(id) { if (id in elements) elements[id].remove() }
+  function removeMyElement(me) { removeElementById($(me).closest(".segmentelement").data("id")) }
+  async function callMyElementMethod(me, method)
+  {
+    const id = $(me).closest(".segmentelement").data("id")
+    if (id && (id in elements) && elements[id] && elements[id][method])
+      if (await elements[id][method]())
+        needSaveSegmentElements()
+  }
+
+  function getSelection() { return $('#elementscontainer').children('.elementselected:visible') }
+  function clearSelection() {
+    getSelection().removeClass('elementselected')
+    updateSelectionDisplay()
+  }
+  function setSelectionById(id) {
+    clearSelection()
+    if (id in elements)
+    {
+      elements[id].element().addClass('elementselected')
+      updateSelectionDisplay()
+    }
+  }
+  let updateSelectionTimer = null
+  function updateSelectionDisplay(delay) {
+    clearTimeout(updateSelectionTimer)
+    if (delay)
+      updateSelectionTimer = setTimeout(() => updateSelectionDisplay(false), 375)
+    else
+    {
+      const count = getSelection().length
+      if (count > 1)
+      {
+        $('#selectionindicator').show()
+        $('#selectioncount').html(count)
+      }
+      else
+        $('#selectionindicator').hide()
+    }
+  }
+
+  lastElements = []
+  function addElementToUndoQueue(element)
+  {
+    lastElements.push(element)
+    while (lastElements.length > 10) lastElements.shift()
+  }

@@ -1,0 +1,172 @@
+script(type='text/javascript').
+  function cursorCreateButton(x, y, params)
+  {
+    const b = new Button(x, y, `button${Math.floor(Math.random() * 1000)}`, params.color)
+    b.inputSetName()
+  }
+
+  class Button {
+    id
+    x
+    y
+    name
+    color
+    constructor(x, y, name, color)
+    {
+      elementid++
+      this.id = elementid
+      elements[this.id] = this
+      addElementToUndoQueue(this)
+      this.x = x
+      this.y = y
+
+      const jelement = $("#button")
+        .clone()
+        .attr('id', 'element' + this.id)
+        .data('id', this.id)
+        .css('left', x * blockSize)
+        .css('top', y * blockSize + topMargin)
+        .css('z-index', 10)
+        .insertAfter("#button")
+        .removeClass('hidden')
+
+      this.setName(name)
+      this.setColor(color)
+
+      const that = this
+
+      jelement.on('click', () => {
+        if (!isCtrlDown) clearSelection()
+        jelement.addClass('elementselected')
+        updateSelectionDisplay()
+        return false
+      })
+
+      const delta = { x: 0, y: 0 }
+      interact(document.getElementById('element' + this.id))
+        .draggable({
+          listeners: {
+            start (event) {
+              delta.x = 0
+              delta.y = 0
+              stopAutosaveTimer()
+              if (!isCtrlDown) clearSelection()
+              jelement.addClass('elementselected')
+              updateSelectionDisplay()
+            },
+            move (event) {
+              delta.x += event.dx
+              delta.y += event.dy
+              event.target.style.left = `${that.x * blockSize + delta.x}px`
+              event.target.style.top = `${that.y * blockSize + topMargin + delta.y}px`
+            },
+            end (event) {
+              that.setPos(jelement.offset().left / blockSize, (jelement.offset().top - topMargin) / blockSize)
+              needSaveSegmentElements()
+            }
+          },
+          modifiers: [
+            interact.modifiers.snap({
+              targets: [
+                interact.snappers.grid({ x: blockSize, y: blockSize })
+              ],
+              relativePoints: [ { x: 0, y: 0 } ]
+            }),
+            interact.modifiers.restrictRect({
+              restriction: { x: 0, y: topMargin, width: 10000, height: 10000 },
+              endOnly: false
+            })
+          ]
+        })
+        .draggable(interactsEnabled)
+    }
+
+    enableInteract(enable) { interact(document.getElementById('element' + this.id)).draggable(enable) }
+
+    element() { return $(`#element${this.id}`) }
+
+    setName(name)
+    {
+      this.name = name
+      this.element().prop('title', this.name || `unnamed`)
+    }
+
+    setColor(color)
+    {
+      this.color = color
+      this.element()
+        .find('img')
+        .attr('src', `/glyph/accessories/button?color=${this.color.replace('#', '')}`)
+    }
+
+    containsPoint(x, y) { return this.x == x && this.y == y }
+    isOverLap(x1, y1, x2, y2) { return this.x >= x1 && this.x <= x2 && this.y >= y1 && this.y <= y2 }
+
+    canMoveLeft() { return this.x > 0 }
+    canMoveUp() { return this.y > 0 }
+
+    moveLeft() { this.setPos(this.x - 1, this.y) }
+    moveRight() { this.setPos(this.x + 1, this.y) }
+    moveUp() { this.setPos(this.x, this.y - 1) }
+    moveDown() { this.setPos(this.x, this.y +1 ) }
+
+    setPos(x, y)
+    {
+      if (x < 0 || y < 0) return
+      this.x = x
+      this.y = y
+
+      this.element()
+        .css('left', this.x * blockSize)
+        .css('top', this.y * blockSize + topMargin)
+
+      needSaveSegmentElements()
+    }
+
+    remove()
+    {
+      if (this.id in elements)
+        delete elements[this.id]
+      this.element().remove()
+      needSaveSegmentElements()
+    }
+
+    setCopyCursor() { setCursor('/glyph/accessories/button/', cursorCreateButton, { }) }
+
+    getSaveData() { return { class: 'button', x: this.x, y: this.y, name: this.name, color: this.color } }
+
+    async inputSetName()
+    {
+      let { value: newName } = await Swal.fire({
+        title: 'Name of button',
+        input: 'text',
+        inputValue: this.name || '',
+        showCancelButton: true,
+        inputPlaceholder: `button${this.id}`
+      })
+      newName = (newName || '').replace(/ /g, '').trim()
+
+      if (newName)
+      {
+        this.setName(newName)
+        return true
+      }
+    }
+
+    async inputSetColor()
+    {
+      const { value: newColor } = await Swal.fire({
+        title: 'Color of button',
+        showCancelButton: true,
+        backdrop: false,
+        preConfirm: () => { return document.getElementById('html5colorpicker').value },
+        html: '<input type="color" id="html5colorpicker" value="' + this.color + '" style="width:50%">' 
+      })
+
+      if (newColor)
+      {
+        this.setColor(newColor)
+        return true
+      }
+    }
+  }

@@ -1,0 +1,150 @@
+div(style='text-align: left; width: 95%')
+    .row
+        .col-md-4
+            .btn-group
+                button.btn(class="btn-primary" onclick="savecode()" title="CTRL+SHIFT+S")
+                    i.bi.bi-upload
+                    | 
+                    | Save and Run
+
+                button.btn.btn-secondary(onclick="formatcode()" title="CTRL+SHIFT+F")
+                    i.bi.bi-code-square
+                    | 
+                    | Reformat code
+        .col-md-8.codeeditor-success-error
+            .codeeditor-error#codeeditorerror
+                = codelasterror
+            .codeeditor-success#codeeditorsuccess
+                |
+    br
+
+    .row
+        .col-md-8
+            .form-group
+                textarea.form-control.codeeditor-code(rows=30 onkeypress="editorkeypress(event)" onkeydown="editorkeydown(event)")#codeeditor
+                    = code
+        .col-md-4
+            .card.card-primary
+                .card-header
+                    | Help
+                    small
+                        | - 
+                        | use your mouse for tooltips
+                .card-body.small.codeeditor-help
+                    .codeeditor-help-item(title="message to console")
+                        | log("Message");
+                    br
+                    .codeeditor-help-item(title="Countdown timer runs once")
+                        | createCountdown(sec3, () => { ... });
+                    .codeeditor-help-item(title="Timer runs continuously")
+                        | createTimer(5 * sec, () => { ... });
+                    .codeeditor-help-item(title="Remove timer")
+                        | removeCountdown(id);
+                    .codeeditor-help-item(title="Remove timer")
+                        | removeTimer(id);
+                    br
+                    .codeeditor-help-item(title="Disable sync of nightlights")
+                        | disableNightLightSync()
+            br
+            .card.card-primary
+                .card-header
+                    | Layout segments
+                .card-body.small.codeeditor-help
+                    = allSegments
+            br
+            .card.card-primary
+                .card-header
+                    | Connected panels and buttons
+                .card-body.small.codeeditor-help
+                    = availableSegments
+            br
+            .card.card-primary
+                .card-header
+                    | Usable actions and events
+                .card-body.small.codeeditor-help
+
+                    b
+                        | ambientligth
+                    br
+                    small
+                        | .GetNight()
+                        br
+                        | .SetNight(0..1)
+                        br
+                        | .ToggleNight()
+                        br
+                        | .SetLight(0..5, 0..1)
+                        br
+                        | .GetLight(0..5)
+                        br
+                        | .ToggleLight(0..5)
+                        br
+                        | .GetEffect(0..1)
+                        br
+                        | .SetEffect(0..1, 0..1)
+                        br
+                        | .ToggleEffect(0..1)
+                        br
+                        | .on('nightchange', (state) => {})
+                        br
+                        | .on('lightchange', (index, state) => {})
+                        br
+                        | .on('effectchange', (index, state) => {})
+
+                    br
+                    br
+                    b
+                        | keypad
+                    br
+                    small
+                        | .on('buttonpress', (index, islong) => {})
+                        br
+                        | .on('buttonshortpress', (index) => {})
+                        br
+                        | .on('buttonlongpress', (index) => {})
+                        br
+                        | .on('switchchange', (index) => {})
+
+                    br
+                    br
+                    b
+                        | signal
+                    br
+                    small
+                        | .GetSignal(0..5)
+                        br
+                        | .SetSignal(0..5, 0..1)
+                        br
+                        | .ToggleSignal(0..5)
+                        br
+                        | .SetSignalPattern(0..5, [0..3, 0..3, 0..3, 0..3])
+                        br
+                        | .on('change', (index, states) => {})
+
+                    br
+                    br
+                    b
+                        | sound
+                    br
+                    small
+                        | .Play(0..index)
+                        br
+                        | .Stop()
+                        br
+                        | .on('change', (state) => {})
+
+                    br
+                    br
+                    b
+                        | turnout
+                    br
+                    small
+                        | .GetTurnout(0..5)
+                        br
+                        | .SetTurnout(0..5, 0..1)
+                        br
+                        | .ToggleTurnout(0..5)
+                        br
+                        | .SetTurnoutByPercent(0..5, 0..100)
+                        br
+                        | .on('change', (index, state) => {})

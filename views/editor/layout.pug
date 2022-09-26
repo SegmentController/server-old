@@ -1,0 +1,431 @@
+extends ../_base
+
+block content
+
+  nav.navbar.navbar-expand-lg.navbar-light.bg-light.fixed-top.noselect(style=`height: ${topMargin}px`)
+    .container-fluid
+      .navbar-brand
+        img(src='/public/favicon/favicon-32x32.png')
+        | Layout
+
+
+      .collapse.navbar-collapse
+        ul.navbar-nav.me-auto.mb-2.mb-lg-0
+
+          li.nav-item
+            a.btn.btn-secondary.active(href='/')
+              i.bi.bi-arrow-left-circle
+              | 
+              | Dashboard
+
+          li.nav-item.dropdown.dropdown-instant.ms-3
+            a.nav-link.dropdown-toggle#navbarDropdown(href='#' role='button' data-bs-toggle='dropdown')
+              | Segments
+            ul.dropdown-menu
+              li
+                a.dropdown-item(href='#' onclick='newSegment()')
+                  | Create new...
+              if segments.length
+                li
+                  hr.dropdown-divider
+                li
+                  h6.dropdown-header
+                    | Open in editor
+              each segment in segments
+                li
+                  a.dropdown-item(href='/editor/segment/' + segment.id)
+                    = segment.name
+                    |
+                    | (#
+                    = segment.id
+                    | )
+
+        ul.navbar-nav.ms-auto.mb-2.mb-lg-0
+          li#panelsave.nav-item.hidden
+            a#buttonsave.btn.btn-warning(href='#' onclick='saveSegmentLocations(true)' title='CTRL+S')
+              | Save layout
+          li.nav-item.dropdown.dropstart
+            a.nav-link(href='#' role='button' data-bs-toggle='dropdown')
+              i.bi.bi-gear-fill
+            ul.dropdown-menu
+              li
+                a.dropdown-item(href='#' onclick="setBlockSize()")
+                  | Block size
+                  | (
+                  = blockSize
+                  | x
+                  = blockSize
+                  | )
+              li
+                a.dropdown-item(href='#' onclick="setWorldColor()")
+                  | World color
+                  | (
+                  = worldColor
+                  | )
+              li
+                a.dropdown-item(href='#' onclick="setSurfaceMargin()")
+                  | Surface margin
+                  | (
+                  = surfaceMargin
+                  | px)
+
+          li.nav-item
+            a.nav-link(href='#' onclick='toggleHelp()')
+              i.bi.bi-question-circle-fill
+
+  .noselect
+    each segment in segments
+      .segment(id='segment' + segment.id style=`position: absolute; left: ${segment.x * blockSize}px; top: ${segment.y * blockSize + topMargin}px`, ondblclick='window.location.href="/editor/segment/' + segment.id + '"')
+        img(src="/layout/segment/"+segment.id)
+        ul.dropdown-menu.context-menu
+          li
+            h6.dropdown-header
+              b
+                = segment.name
+              |
+              | (#
+              = segment.id
+              | )
+              | segment
+          li
+            a.dropdown-item(href='/editor/segment/' + segment.id)
+              | Open in editor
+          li
+            hr.dropdown-divider
+          li
+            a.dropdown-item(href='#' onclick='setSegmentName(' + segment.id + ', "' + segment.name + '")')
+              | Rename
+          li
+            a.dropdown-item(href='#' onclick='setSegmentId(' + segment.id + ', "' + segment.name + '")')
+              | Modify ID
+              | (#
+              = segment.id
+              | )
+          li
+            a.dropdown-item.text-danger(href='#' onclick='deleteSegment(' + segment.id + ', "' + segment.name + '")')
+              | Delete
+
+  .card#help.hidden.noselect(style=`position: absolute; width: 24rem; top: ${topMargin + 16}px; right: 16px; z-index: 100`, onclick='hideHelp()')
+    .card-body
+      h6.card-title
+        i.bi.bi-keyboard
+        | 
+        | Layout editor shortcuts
+      p.card-text
+        small
+          | Many commands are available with keyboard shortcuts.
+        dl.row
+          dt.col-sm-5
+            kbd
+              | Shift + N
+          dd.col-sm-7
+            | New segment
+
+          dt.col-sm-5
+            i.bi.bi-mouse
+            | 
+            kbd Scr
+          dd.col-sm-7
+            | Scroll up/down
+          dt.col-sm-5
+            kbd Shift
+            |
+            | +
+            |
+            i.bi.bi-mouse
+            | 
+            kbd Scr
+          dd.col-sm-7
+            | Scroll left/right
+
+          dt.col-sm-5
+            kbd
+              | Shift + 1..9
+          dd.col-sm-7
+            | Open segment
+            small
+              |
+              | (1-9 only)
+
+          hr
+
+          dt.col-sm-5
+            kbd
+              | Shift + H
+          dd.col-sm-7
+            | Show/hide this help
+
+  style.
+    .segment {
+      outline-width: 1px;
+      outline-style: dashed;
+      outline-color: #000;
+    }
+
+  script(type='text/javascript').
+
+    initContextMenus('.segment')
+
+    hotkeys('shift+n', function(event){
+      event.preventDefault()
+      newSegment() 
+    })
+    hotkeys('shift+h', function(event){ toggleHelp() })
+
+    function showHelp()
+    {
+      $("#help").fadeIn()
+      setTimeout(() => $("#help").fadeOut(), 30 * 1000)
+      localStorage.setItem('hideLayoutHelp', false)
+    }
+    function hideHelp()
+    {
+      $("#help").fadeOut()
+      localStorage.setItem('hideLayoutHelp', true)
+    }
+    function toggleHelp()
+    {
+      if($("#help").is(":visible"))
+        hideHelp()
+      else
+        showHelp()
+    }
+    if (localStorage.getItem('hideLayoutHelp') != 'true') showHelp()
+
+    const topMargin = #{topMargin}
+    const blockSize = #{blockSize}
+    const segments = []
+
+    let timerAutosave = null
+    let downcountSuccessSave = 1
+    function stopAutosaveTimer() { clearTimeout(timerAutosave) }
+    function startAutosaveTimer()
+    {
+      stopAutosaveTimer()
+      timerAutosave = setTimeout(() => { saveSegmentLocations() }, 1250)
+    }
+    function saveSegmentLocations(displaytoast)
+    {
+      stopAutosaveTimer()
+
+      if(!$("#panelsave").is(":visible")) return
+
+      const locations = {}
+      for(const segment of segments)
+      {
+        const id = segment.id
+        const x = segment.jelement.offset().left / blockSize
+        const y = (segment.jelement.offset().top - topMargin) / blockSize
+        locations[id] = {x, y}
+      }
+      $.post('/editor/layout/set/segmentlocations', { locations: JSON.stringify(locations) })
+        .done(function() { 
+          if (displaytoast && downcountSuccessSave)
+          {
+            ToastSuccess.fire({ html: 'Saved successfully<br/><small>(Will not appear next time)</small>' })
+            downcountSuccessSave--
+          }
+          $('#buttonsave').removeClass('btn-danger').addClass('btn-warning')
+          $('#panelsave').fadeOut()
+        })
+        .fail(function(xhr, status, error) {
+          if (displaytoast)
+            ToastError.fire({ html: `<b>Error</b><br/>${xhr.responseText}` })
+          else
+            $('#buttonsave').removeClass('btn-warning').addClass('btn-danger')
+          downcountSuccessSave = 1
+        })
+    }
+
+    async function newSegment()
+    {
+      const { value: newsegment } = await Swal.fire({
+        title: 'Create new segment',
+        showCancelButton: true,
+        preConfirm: () => { 
+          return {
+            id: document.getElementById('newid').value,
+            name: document.getElementById('newname').value
+          }
+        },
+        html: '#Id: <input type="number" id="newid" name="newid" min="10" max="100" value="#{nextId}" style="width:15%"> Name: <input type="text" id="newname" name="newname" maxlength="30" value="New segment" style="width:60%">' 
+      })
+
+      if (newsegment && newsegment.id && newsegment.name)
+        $.post('/editor/layout/add/segment', { id: newsegment.id, name: newsegment.name })
+          .done(function() { 
+            pagereload()
+          })
+          .fail(function(xhr, status, error) {
+            ToastError.fire({ html: `<b>Error</b><br/>${xhr.responseText}` })
+          })
+    }
+
+    async function setBlockSize()
+    {
+      const { value: blockSize } = await Swal.fire({
+        title: 'Block size of layout',
+        input: 'select',
+        inputOptions: {
+          16: 'Micro (16x16)',
+          24: 'Small (24x24)',
+          32: 'Normal (32x32)',
+          48: 'Large (48x48)',
+        },
+        inputValue: #{blockSize},
+        showCancelButton: true,
+      })
+
+      if (blockSize)
+        $.post('/editor/layout/set/blocksize', { blockSize: blockSize })
+          .done(function() { 
+            pagereload()
+          })
+          .fail(function(xhr, status, error) {
+            ToastError.fire({ html: `<b>Error</b><br/>${xhr.responseText}` })
+          })
+    }
+
+    async function setWorldColor()
+    {
+      const { value: worldColor } = await Swal.fire({
+        title: 'Color of world (background)',
+        showCancelButton: true,
+        preConfirm: () => { return document.getElementById('html5colorpicker').value },
+        html: '<input type="color" id="html5colorpicker" value="#{worldColor}" style="width:50%">' 
+      })
+
+      if (worldColor)
+        $.post('/editor/layout/set/worldcolor', { worldColor: worldColor })
+          .done(function() { 
+            pagereload()
+          })
+          .fail(function(xhr, status, error) {
+            ToastError.fire({ html: `<b>Error</b><br/>${xhr.responseText}` })
+          })
+    }
+
+    async function setSurfaceMargin()
+    {
+      const { value: surfaceMargin } = await Swal.fire({
+        title: 'Margin of surface elements',
+        input: 'range',
+        inputLabel: 'Margin in pixels (max. 1/4th of block size)',
+        inputAttributes: {
+          min: 0,
+          max: #{blockSize / 4},
+          step: 1
+        },
+        inputValue: #{surfaceMargin},
+        showCancelButton: true,
+      })
+
+      if (surfaceMargin)
+        $.post('/editor/layout/set/surfacemargin', { surfaceMargin: surfaceMargin })
+          .done(function() { 
+            pagereload()
+          })
+          .fail(function(xhr, status, error) {
+            ToastError.fire({ html: `<b>Error</b><br/>${xhr.responseText}` })
+          })
+    }
+
+    async function setSegmentName(id, name)
+    {
+      const { value: segmentName } = await Swal.fire({
+        title: 'New name of segment',
+        input: 'text',
+        inputValue: name,
+        showCancelButton: true,
+      })
+
+      if (segmentName)
+        $.post('/editor/layout/set/segmentname', { id, name: segmentName })
+          .done(function() { 
+            pagereload()
+          })
+          .fail(function(xhr, status, error) {
+            ToastError.fire({ html: `<b>Error</b><br/>${xhr.responseText}` })
+          })
+    }
+
+    async function setSegmentId(id, name)
+    {
+      const { value: newId } = await Swal.fire({
+        title: 'New ID of segment',
+        showCancelButton: true,
+        preConfirm: () => { return document.getElementById('newid').value },
+        html: '#Id: <input type="number" id="newid" name="newid" min="10" max="100" value="' + id + '" style="width:70%">' 
+      })
+
+      if (newId)
+        $.post('/editor/layout/set/segmentid', { id, newid: newId })
+          .done(function() { 
+            pagereload()
+          })
+          .fail(function(xhr, status, error) {
+            ToastError.fire({ html: `<b>Error</b><br/>${xhr.responseText}` })
+          })
+    }
+
+    function deleteSegment(id, name)
+    {
+      Swal.fire({
+        title: `Do you want to delete ${name} (#${id}) segment?`,
+        text: 'We recommend that you back up the entire layout before deleting the segment so that the data can be restored if necessary.',
+        showCancelButton: true,
+        confirmButtonText: 'Delete',
+        confirmButtonColor: 'red',
+      }).then((result) => {
+        if (result.isConfirmed)
+          $.post('/editor/layout/delete/segment', { id })
+            .done(function() { 
+              pagereload()
+            })
+            .fail(function(xhr, status, error) {
+              ToastError.fire({ html: `<b>Error</b><br/>${xhr.responseText}` })
+            })
+      })      
+    }
+
+  script(src='/assets/interactjs/interact.min.js?' + APPVERSION)
+  each segment in segments
+    script(type='text/javascript').
+      if (#{segment.id} > 0 && #{segment.id} < 10) hotkeys('shift+#{segment.id}', function(event){ window.location.href = '/editor/segment/#{segment.id}' });
+
+      if (window.jQuery)
+        $(function () {
+          const position = { x: 0, y: 0 }
+          const element = document.getElementById('segment#{segment.id}')
+          const jelement = $('#segment#{segment.id}')
+          segments.push({id: #{segment.id}, jelement})
+
+          interact(element).draggable({
+            listeners: {
+              start (event) {
+                stopAutosaveTimer()
+              },
+              end (event) {
+                $('#panelsave').fadeIn()
+                startAutosaveTimer()
+              },
+              move (event) {
+                position.x += event.dx
+                position.y += event.dy
+                event.target.style.transform = `translate(${position.x}px, ${position.y}px)`
+              },
+            },
+            modifiers: [
+              interact.modifiers.snap({
+                targets: [
+                  interact.snappers.grid({ x: blockSize, y: blockSize })
+                ],
+                relativePoints: [ { x: 0, y: 0 } ]
+              }),
+              interact.modifiers.restrictRect({
+                restriction: { x: 0, y: topMargin, width: 10000, height: 10000 },
+                endOnly: false
+              })
+            ]
+          })
+      });

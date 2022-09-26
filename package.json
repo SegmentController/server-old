@@ -1,0 +1,182 @@
+{
+  "name": "segmentcontrollerserver",
+  "version": "1.0.0",
+  "description": "",
+  "author": "Balázs Csaba (@bcsabaengine)",
+  "license": "MIT",
+  "main": "index.js",
+  "bin": "index.js",
+  "scripts": {
+    "dev": "nodemon index.ts -p 8080",
+    "lint": "eslint ./lib/*.js ./lib/**/*.js ./routes/*.js ./index.js",
+    "lint-fix": "eslint ./lib/*.js ./lib/**/*.js ./routes/*.js ./index.js --fix",
+    "pkg": "pkg -t node16-linux-x64 .",
+    "pkgzip": "pkg -t node16-linux-x64 --compress GZip .",
+    "pkgm": "pkg -t node16-macos-x64 .",
+    "pkgmzip": "pkg -t node16-macos-x64 --compress GZip .",
+    "pkgmarm": "pkg -t node16-macos-arm64 .",
+    "pkgmarmzip": "pkg -t node16-macos-arm64 --compress GZip .",
+    "pkgw": "pkg -t node16-win-x64 .",
+    "pkgwzip": "pkg -t node16-win-x64 --compress GZip ."
+  },
+  "keywords": [
+    "SegmentController"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "eslintConfig": {
+    "env": {
+      "browser": true,
+      "commonjs": true,
+      "es2021": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "plugin:node/recommended",
+      "plugin:promise/recommended",
+      "plugin:sonarjs/recommended",
+      "plugin:unicorn/recommended"
+    ],
+    "parser": "@babel/eslint-parser",
+    "plugins": [
+      "promise",
+      "deprecate",
+      "const-case",
+      "sonarjs",
+      "unicorn"
+    ],
+    "parserOptions": {
+      "requireConfigFile": false,
+      "ecmaVersion": "latest"
+    },
+    "globals": {
+      "__dirname": "readonly",
+      "__filename": "readonly",
+      "setImmediate": "readonly",
+      "process": "readonly",
+      "Buffer": "readonly",
+      "cmdline": "readonly",
+      "config": "readonly",
+      "runtimeConfig": "readonly",
+      "logger": "readonly",
+      "rf24": "readonly",
+      "wifi": "readonly",
+      "segments": "readonly",
+      "ws": "readonly",
+      "layoutManager": "readonly",
+      "http": "readonly",
+      "context2dTranslate": "readonly"
+    },
+    "rules": {
+      "semi": [
+        "warn",
+        "never"
+      ],
+      "quotes": [
+        "warn",
+        "single"
+      ],
+      "no-extra-parens": "off",
+      "no-unreachable-loop": "error",
+      "no-case-declarations": "off",
+      "block-scoped-var": "error",
+      "class-methods-use-this": "warn",
+      "consistent-return": "error",
+      "default-param-last": "error",
+      "eqeqeq": "warn",
+      "no-empty-function": "warn",
+      "no-extra-bind": "warn",
+      "no-new": "warn",
+      "no-new-func": "warn",
+      "no-new-wrappers": "warn",
+      "no-self-compare": "warn",
+      "radix": "warn",
+      "camelcase": "warn",
+      "no-new-object": "warn",
+      "no-process-exit": "off",
+      "node/shebang": "off",
+      "deprecate/function": "error",
+      "deprecate/member-expression": "error",
+      "deprecate/import": "error",
+      "const-case/uppercase": "warn",
+      "unicorn/prefer-module": "off",
+      "unicorn/empty-brace-spaces": "off",
+      "unicorn/filename-case": "off",
+      "unicorn/no-process-exit": "off",
+      "unicorn/no-null": "off"
+    }
+  },
+  "eslintIgnore": [
+    "public",
+    "views"
+  ],
+  "nodemonConfig": {
+    "exec": "node index.js -d",
+    "ignore": [
+      "public/*"
+    ],
+    "delay": 1000
+  },
+  "pkg": {
+    "scripts": "*.js",
+    "assets": [
+      "views/**/*",
+      "public/**/*",
+      "node_modules/canvas/build/Release/*.dll",
+      "node_modules/canvas/build/Release/libjpeg.so.*",
+      "node_modules/canvas/build/Release/lib*.dylib",
+      "node_modules/platform-folders/build/Release/platformFolders.node",
+      "node_modules/@serialport/bindings/build/Release/bindings.node"
+    ],
+    "outputPath": "../server-dist"
+  },
+  "dependencies": {
+    "@fastify/compress": "^6.1.1",
+    "@fastify/cookie": "^8.3.0",
+    "@fastify/etag": "^4.1.0",
+    "@fastify/formbody": "^7.3.0",
+    "@fastify/helmet": "^10.0.0",
+    "@fastify/static": "^6.5.0",
+    "@fastify/view": "^7.1.0",
+    "@fastify/websocket": "^7.0.1",
+    "@mgcrea/fastify-session": "^0.16.0",
+    "bitset": "^5.1.1",
+    "bootstrap": "^5.2.1",
+    "bootstrap-icons": "^1.9.1",
+    "canvas": "^2.10.1",
+    "color": "^4.2.3",
+    "dayjs": "^1.11.5",
+    "error-stack-parser": "^2.1.4",
+    "fastify": "^4.6.0",
+    "fastify-favicon": "^4.2.0",
+    "fastify-route-group": "^1.0.2",
+    "glob": "^8.0.3",
+    "hotkeys-js": "^3.10.0",
+    "ini": "^3.0.1",
+    "interactjs": "^1.10.17",
+    "jquery": "^3.6.1",
+    "js-beautify": "^1.14.6",
+    "merge-deep": "^3.0.3",
+    "nanoid": "3.3.4",
+    "platform-folders": "^0.6.0",
+    "pug": "^3.0.2",
+    "rf24meshserialnode": "^0.9.6",
+    "sweetalert2": "^11.4.33",
+    "winston": "^3.8.2",
+    "yargs": "^17.5.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.19.1",
+    "@babel/eslint-parser": "^7.19.1",
+    "eslint": "^8.24.0",
+    "eslint-plugin-const-case": "^1.2.2",
+    "eslint-plugin-deprecate": "^0.7.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^6.0.1",
+    "eslint-plugin-sonarjs": "^0.15.0",
+    "eslint-plugin-unicorn": "^43.0.2",
+    "nodemon": "^2.0.20",
+    "pkg": "^5.8.0"
+  }
+}

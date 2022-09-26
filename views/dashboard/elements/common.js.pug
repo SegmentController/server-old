@@ -1,0 +1,39 @@
+script(type='text/javascript').
+    const blockSize = #{blockSize}
+    let elements = {}
+
+    $(function() 
+    {
+        tickAlternateState = 0
+        setInterval(function()
+        {
+            tickAlternateState = 1 - tickAlternateState
+            for(const id in elements)
+                if (elements[id].tickAlternate)
+                    elements[id].tickAlternate(tickAlternateState)
+        }, 500)
+    })
+
+    function initLongPress()
+    {
+        let pressTimer
+        $('.context-container').on('mousedown touchstart', function(e) {
+            e.stopPropagation()
+            pressTimer = setTimeout(function(that)
+            {
+                $(that).find('ul.dropdown-menu').css('left', -16).css('top', -16).show()
+            },750, this);
+        });
+        $('.context-container').on('mouseup touchend', function(e) {
+            clearTimeout(pressTimer)
+        });
+    }
+
+    function processElementEvent(segmentid, panelid, event, eventdata)
+    {
+        for(const id in elements)
+            if (elements[id].processEvent)
+                elements[id].processEvent(segmentid, panelid, event, eventdata)
+    }
+
+    function doAction(segmentid, uri, data = {}) { $.post(`/op/${segmentid}/${uri}`, data) }

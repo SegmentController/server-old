@@ -1,0 +1,128 @@
+style.
+  #bg {
+    background-image: url('/layout/background?last=#{layoutLastModify}');
+    background-position: 0 0;
+    background-repeat: no-repeat;
+    background-color: transparent;
+    border: 0;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: #{backgroundSize.width}px;
+    height: #{backgroundSize.height}px;
+    z-index: -1;
+  }
+
+script(type='text/javascript').
+  let imgw = #{backgroundSize.width}
+  let imgh = #{backgroundSize.height}
+
+  $(document).ready(function () {
+    var $bg = $('#bg'),
+      origin = { x: 0, y: 0 },
+      start = { x: 0, y: 0 },
+      movecontinue = false;
+
+    function Move(e) {
+      if (e.type == 'touchmove') {
+        e.clientX = Math.round(e.touches[0].clientX);
+        e.clientY = Math.round(e.touches[0].clientY);
+      }
+
+      var moveby = {
+        x: origin.x - e.clientX,
+        y: origin.y - e.clientY
+      };
+
+      if (movecontinue === true) {
+        if (!isNaN(moveby.x))
+          start.x = start.x - moveby.x;
+        if (!isNaN(moveby.y))
+          start.y = start.y - moveby.y;
+
+        if (start.x > 0)
+          start.x = 0;
+        if (start.y > 0)
+          start.y = 0;
+
+        if (imgw < window.innerWidth)
+          $(this).css('left', (window.innerWidth - imgw) / 2 + 'px');
+        else {
+          if (start.x < window.innerWidth - imgw)
+            start.x = window.innerWidth - imgw;
+          $(this).css('left', start.x + 'px');
+        }
+
+        if (imgh < window.innerHeight)
+          $(this).css('top', (window.innerHeight - imgh) / 2 + 'px');
+        else{
+          if (start.y < window.innerHeight - imgh)
+            start.y = window.innerHeight - imgh;
+          $(this).css('top', start.y + 'px');
+        }
+      }
+      if (!isNaN(e.clientX))
+        origin.x = e.clientX;
+      if (!isNaN(e.clientY))
+        origin.y = e.clientY;
+
+      e.stopPropagation();
+      return false;
+    }
+
+    function Handle(e) {
+      movecontinue = false;
+      $bg.unbind('mousemove touchmove', Move);
+
+      if (e.type == 'mousedown' || e.type == 'touchstart') {
+        origin.x = e.clientX;
+        origin.y = e.clientY;
+        movecontinue = true;
+        $bg.bind('mousemove touchmove', Move);
+      } else {
+        $(document.body).focus();
+      }
+      //e.stopPropagation();
+      //return false;
+    }
+
+    let eventCount = 0
+    let lastEventTime = 0
+    function HandleDouble(e) {
+      if (Date.now() - lastEventTime < 25) return 
+      eventCount++
+      lastEventTime = Date.now()
+
+      if (eventCount > 2)
+        Reset()
+      setTimeout(() => { eventCount = 0 }, 250)
+    }
+
+    function Reset() {
+      start = { x: 0, y: 0 };
+      $('#bg').animate({ top: 0, left: 0 }, 'fast');
+    }
+
+    function InitBySize()
+    {
+      if (imgw < window.innerWidth && imgh < window.innerHeight)
+      {
+        $bg.unbind('mousedown mouseup mouseleave touchstart touchend touchcancel', Handle);
+        $bg.unbind('mouseup touchend', HandleDouble);
+        $('#bg').animate({ left: (window.innerWidth - imgw) / 2, top: (window.innerHeight - imgh) / 2 }, 'fast')
+      }
+      else
+      {
+        $bg.bind('mousedown mouseup mouseleave touchstart touchend touchcancel', Handle);
+        $bg.bind('mouseup touchend', HandleDouble);
+        Reset()
+      }
+    }
+    let resizetimer = null
+    $(window).resize(function()
+    {
+      clearTimeout(resizetimer);
+      resizetimer = setTimeout(function() { InitBySize() }, 250)
+    })
+    InitBySize()
+  });

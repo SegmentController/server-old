@@ -1,0 +1,111 @@
+.context-container.hidden#signal(style=`position:absolute; left:0; top:0; width: ${blockSize}px; height: ${blockSize}px;`)
+  img(oncontextmenu='return false;')
+  ul.dropdown-menu.bs-menu(data-bs-offset='0,2')
+    li
+      a.dropdown-item(href='#' onclick='callMyElementMethod(this, "inputSetPanel")')
+        | Dummy
+    li
+      hr.dropdown-divider
+    li
+      a.dropdown-item.text-danger(href='#' onclick='removeMyElement(this)')
+        | Dummy
+
+script(type='text/javascript').
+  class Signal {
+    id
+    segmentid
+    x
+    y
+    panel = null
+    index = null
+    type = null
+    bulbs = null
+
+    constructor(id, segmentid, x, y, panel, index, type, bulbs, currenstates)
+    {
+      this.id = id
+      this.segmentid = segmentid
+      this.x = x
+      this.y = y
+      this.panel = panel
+      this.index = index
+      this.type = type
+      this.bulbs = bulbs
+      elements[this.id] = this
+
+      const jelement = $('#signal').clone()
+        .attr('id', 'element' + this.id)
+        .css('left', this.x * blockSize)
+        .css('top', this.y * blockSize)
+        .css('cursor', 'pointer')
+        .css('z-index', 1)
+        .removeClass('hidden')
+        .appendTo("#bg")
+
+      this.displayBulbs('0'.repeat(this.bulbs.length))
+      this.adaptBulbs(currenstates)
+
+      jelement.on('click', () => {
+        doAction(this.segmentid, `signal/${this.panel + 1}/toggle/${this.index + 1}`)
+      })
+    }
+
+    element() { return $(`#element${this.id}`) }
+
+    tickAlternate(state) { 
+      if (this.state1 !== this.state2)
+        this.displayBulbs(state ? this.state1 : this.state2)
+    }
+
+    state1 = '0'
+    state2 = '0'
+    adaptBulbs(bulbStates)
+    {
+      this.state1 = ''
+      this.state2 = ''
+      for(let i = 0; i < this.bulbs.length; i++)
+        switch(bulbStates[i])
+        {
+          case '1':
+            this.state1 += this.bulbs[i]
+            this.state2 += this.bulbs[i]
+            break
+          case 'S':
+          case 'F':
+            this.state1 += this.bulbs[i]
+            this.state2 += '0'
+            break
+          default:
+            this.state1 += '0'
+            this.state2 += '0'
+            break
+        }
+      this.displayBulbs(this.state1)
+    }
+
+    displayBulbs(state)
+    {
+      this.element()
+        .find('img')
+        .attr('src', `/glyph/signal/${this.type}/${state}`)
+    }
+
+    processEvent(segmentid, panelid, event, eventdata)
+    {
+      if (segmentid !== this.segmentid) return
+      if (panelid !== `signal${this.panel + 1}`) return 
+
+      if (eventdata && eventdata.length == 2 && eventdata[0] == this.index)
+      {
+        const bulbConverter = '0SF1'
+        const bulbStates = eventdata[1]
+        const bulbStatesToDisplay = 
+          bulbConverter[bulbStates.bulbA] + 
+          bulbConverter[bulbStates.bulbB] + 
+          bulbConverter[bulbStates.bulbC] + 
+          bulbConverter[bulbStates.bulbD]
+
+        this.adaptBulbs(bulbStatesToDisplay)
+      }
+    }
+  }

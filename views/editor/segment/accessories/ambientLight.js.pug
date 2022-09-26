@@ -1,0 +1,199 @@
+script(type='text/javascript').
+  function cursorCreateAmbientLight(x, y, params)
+  {
+    new AmbientLight(x, y, -1, -1)
+    needSaveSegmentElements()
+  }
+
+  class AmbientLight {
+    id
+    x
+    y
+    panel = null
+    index = null
+    constructor(x, y, panel, index)
+    {
+      elementid++
+      this.id = elementid
+      elements[this.id] = this
+      addElementToUndoQueue(this)
+      this.x = x
+      this.y = y
+
+      const jelement = $("#ambientlight")
+        .clone()
+        .attr('id', 'element' + this.id)
+        .data('id', this.id)
+        .css('left', x * blockSize)
+        .css('top', y * blockSize + topMargin)
+        .css('z-index', 10)
+        .insertAfter("#ambientlight")
+        .removeClass('hidden')
+
+      this.element()
+        .find('img')
+        .attr('src', '/glyph/accessories/light')
+
+      this.setPanelIndex(panel, index)
+
+      const that = this
+
+      jelement.on('click', () => {
+        if (!isCtrlDown) clearSelection()
+        jelement.addClass('elementselected')
+        updateSelectionDisplay()
+        return false
+      })
+
+      const delta = { x: 0, y: 0 }
+      interact(document.getElementById('element' + this.id))
+        .draggable({
+          listeners: {
+            start (event) {
+              delta.x = 0
+              delta.y = 0
+              stopAutosaveTimer()
+              if (!isCtrlDown) clearSelection()
+              jelement.addClass('elementselected')
+              updateSelectionDisplay()
+            },
+            move (event) {
+              delta.x += event.dx
+              delta.y += event.dy
+              event.target.style.left = `${that.x * blockSize + delta.x}px`
+              event.target.style.top = `${that.y * blockSize + topMargin + delta.y}px`
+            },
+            end (event) {
+              that.setPos(jelement.offset().left / blockSize, (jelement.offset().top - topMargin) / blockSize)
+              needSaveSegmentElements()
+            }
+          },
+          modifiers: [
+            interact.modifiers.snap({
+              targets: [
+                interact.snappers.grid({ x: blockSize, y: blockSize })
+              ],
+              relativePoints: [ { x: 0, y: 0 } ]
+            }),
+            interact.modifiers.restrictRect({
+              restriction: { x: 0, y: topMargin, width: 10000, height: 10000 },
+              endOnly: false
+            })
+          ]
+        })
+        .draggable(interactsEnabled)
+    }
+
+    enableInteract(enable) { interact(document.getElementById('element' + this.id)).draggable(enable) }
+
+    element() { return $(`#element${this.id}`) }
+
+    setPanelIndex(panel, index)
+    {
+      this.panel = panel
+      this.index = index
+      this.element().prop('title', this.getConnectionInfo())
+    }
+
+    containsPoint(x, y) { return this.x == x && this.y == y }
+    isOverLap(x1, y1, x2, y2) { return this.x >= x1 && this.x <= x2 && this.y >= y1 && this.y <= y2 }
+
+    canMoveLeft() { return this.x > 0 }
+    canMoveUp() { return this.y > 0 }
+
+    moveLeft() { this.setPos(this.x - 1, this.y) }
+    moveRight() { this.setPos(this.x + 1, this.y) }
+    moveUp() { this.setPos(this.x, this.y - 1) }
+    moveDown() { this.setPos(this.x, this.y +1 ) }
+
+    setPos(x, y)
+    {
+      if (x < 0 || y < 0) return
+      this.x = x
+      this.y = y
+
+      this.element()
+        .css('left', this.x * blockSize)
+        .css('top', this.y * blockSize + topMargin)
+
+      needSaveSegmentElements()
+    }
+
+    remove()
+    {
+      if (this.id in elements)
+        delete elements[this.id]
+      this.element().remove()
+      needSaveSegmentElements()
+    }
+
+    setCopyCursor() { setCursor('/glyph/accessories/light/', cursorCreateLight, { }) }
+
+    getSaveData() { return { class: 'ambientLight', x: this.x, y: this.y, panel: this.panel, index: this.index } }
+
+    getConnectionInfo() { return this.panel + this.index >= 0 ? `Light #${this.panel + 1} / ${'N123456AB'[this.index]}` : 'Light not connected' }
+
+    async inputSetPanel()
+    {
+      const { value: newPanelIndex } = await Swal.fire({
+        title: 'Select panel for ambient light',
+        input: 'select',
+        inputValue: (this.panel + 1) * 10 + this.index + 1,
+        inputOptions: {
+          0: 'Not connected',
+          'Light#1': {
+            11: '#1 Night light',
+            12: '#1 Light 1',
+            13: '#1 Light 2',
+            14: '#1 Light 3',
+            15: '#1 Light 4',
+            16: '#1 Light 5',
+            17: '#1 Light 6',
+            18: '#1 Effect A',
+            19: '#1 Effect B',
+          },
+          'Light#2': {
+            21: '#2 Night light',
+            22: '#2 Light 1',
+            23: '#2 Light 2',
+            24: '#2 Light 3',
+            25: '#2 Light 4',
+            26: '#2 Light 5',
+            27: '#2 Light 6',
+            28: '#2 Effect A',
+            29: '#2 Effect B',
+          },
+          'Light#3': {
+            31: '#3 Night light',
+            32: '#3 Light 1',
+            33: '#3 Light 2',
+            34: '#3 Light 3',
+            35: '#3 Light 4',
+            36: '#3 Light 5',
+            37: '#3 Light 6',
+            38: '#3 Effect A',
+            39: '#3 Effect B',
+          },
+          'Light#4': {
+            41: '#4 Night light',
+            42: '#4 Light 1',
+            43: '#4 Light 2',
+            44: '#4 Light 3',
+            45: '#4 Light 4',
+            46: '#4 Light 5',
+            47: '#4 Light 6',
+            48: '#4 Effect A',
+            49: '#4 Effect B',
+          },
+        },
+        //inputPlaceholder: 'Select panel and index',
+        showCancelButton: true
+      })
+
+      if (newPanelIndex !== undefined)
+      {
+        this.setPanelIndex(Math.floor(newPanelIndex / 10) - 1, newPanelIndex % 10 - 1)
+        return true
+      }
+    }
+  }

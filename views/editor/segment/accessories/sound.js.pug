@@ -1,0 +1,160 @@
+script(type='text/javascript').
+  function cursorCreateSound(x, y, params)
+  {
+    new Sound(x, y, -1)
+    needSaveSegmentElements()
+  }
+
+  class Sound {
+    id
+    x
+    y
+    index = null
+    constructor(x, y, index)
+    {
+      elementid++
+      this.id = elementid
+      elements[this.id] = this
+      addElementToUndoQueue(this)
+      this.x = x
+      this.y = y
+
+      const jelement = $("#sound")
+        .clone()
+        .attr('id', 'element' + this.id)
+        .data('id', this.id)
+        .css('left', x * blockSize)
+        .css('top', y * blockSize + topMargin)
+        .css('z-index', 10)
+        .insertAfter("#sound")
+        .removeClass('hidden')
+
+      this.element()
+        .find('img')
+        .attr('src', '/glyph/accessories/sound')
+
+      this.setIndex(index)
+
+      const that = this
+
+      jelement.on('click', () => {
+        if (!isCtrlDown) clearSelection()
+        jelement.addClass('elementselected')
+        updateSelectionDisplay()
+        return false
+      })
+
+      const delta = { x: 0, y: 0 }
+      interact(document.getElementById('element' + this.id))
+        .draggable({
+          listeners: {
+            start (event) {
+              delta.x = 0
+              delta.y = 0
+              stopAutosaveTimer()
+              if (!isCtrlDown) clearSelection()
+              jelement.addClass('elementselected')
+              updateSelectionDisplay()
+            },
+            move (event) {
+              delta.x += event.dx
+              delta.y += event.dy
+              event.target.style.left = `${that.x * blockSize + delta.x}px`
+              event.target.style.top = `${that.y * blockSize + topMargin + delta.y}px`
+            },
+            end (event) {
+              that.setPos(jelement.offset().left / blockSize, (jelement.offset().top - topMargin) / blockSize)
+              needSaveSegmentElements()
+            }
+          },
+          modifiers: [
+            interact.modifiers.snap({
+              targets: [
+                interact.snappers.grid({ x: blockSize, y: blockSize })
+              ],
+              relativePoints: [ { x: 0, y: 0 } ]
+            }),
+            interact.modifiers.restrictRect({
+              restriction: { x: 0, y: topMargin, width: 10000, height: 10000 },
+              endOnly: false
+            })
+          ]
+        })
+        .draggable(interactsEnabled)
+    }
+
+    enableInteract(enable) { interact(document.getElementById('element' + this.id)).draggable(enable) }
+
+    element() { return $(`#element${this.id}`) }
+
+    setIndex(index)
+    {
+      this.index = index
+      this.element().prop('title', this.getConnectionInfo())
+      needSaveSegmentElements()
+    }
+
+    containsPoint(x, y) { return this.x == x && this.y == y }
+    isOverLap(x1, y1, x2, y2) { return this.x >= x1 && this.x <= x2 && this.y >= y1 && this.y <= y2 }
+
+    canMoveLeft() { return this.x > 0 }
+    canMoveUp() { return this.y > 0 }
+
+    moveLeft() { this.setPos(this.x - 1, this.y) }
+    moveRight() { this.setPos(this.x + 1, this.y) }
+    moveUp() { this.setPos(this.x, this.y - 1) }
+    moveDown() { this.setPos(this.x, this.y +1 ) }
+
+    setPos(x, y)
+    {
+      if (x < 0 || y < 0) return
+      this.x = x
+      this.y = y
+
+      this.element()
+        .css('left', this.x * blockSize)
+        .css('top', this.y * blockSize + topMargin)
+
+      needSaveSegmentElements()
+    }
+
+    remove()
+    {
+      if (this.id in elements)
+        delete elements[this.id]
+      this.element().remove()
+      needSaveSegmentElements()
+    }
+
+    setCopyCursor() { setCursor('/glyph/accessories/sound/1', cursorCreateLight, { }) }
+
+    getSaveData() { return { class: 'sound', x: this.x, y: this.y, index: this.index } }
+
+    getConnectionInfo() { return this.index >= 0 ? `Sound ${this.index + 1}` : 'Sound not connected' }
+
+    async inputSetSound()
+    {
+      const { value: newIndex } = await Swal.fire({
+        title: 'Select sound',
+        input: 'select',
+        inputValue: this.index + 1,
+        inputOptions: {
+          0: 'Not connected',
+          1: 'Sound 1',
+          2: 'Sound 2',
+          3: 'Sound 3',
+          4: 'Sound 4',
+          5: 'Sound 5',
+          6: 'Sound 6',
+        },
+        //inputPlaceholder: 'Select panel and index',
+        showCancelButton: true
+      })
+
+      if (newIndex !== undefined)
+      {
+        this.setIndex(newIndex - 1)
+        return true
+      }
+    }
+  }

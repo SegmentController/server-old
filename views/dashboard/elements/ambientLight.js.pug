@@ -1,0 +1,83 @@
+.context-container.hidden#ambientlight(style=`position:absolute; left:0; top:0; width: ${blockSize}px; height: ${blockSize}px;`)
+  img(oncontextmenu='return false;')
+
+script(type='text/javascript').
+  class AmbientLight {
+    id
+    segmentid
+    x
+    y
+    panel = null
+    index = null
+    state = false
+
+    constructor(id, segmentid, x, y, panel, index, state)
+    {
+      this.id = id
+      this.segmentid = segmentid
+      this.x = x
+      this.y = y
+      this.panel = panel
+      this.index = index
+      this.state = state
+      elements[this.id] = this
+
+      const jelement = $('#ambientlight').clone()
+        .attr('id', 'element' + this.id)
+        .css('left', this.x * blockSize)
+        .css('top', this.y * blockSize)
+        .css('cursor', 'pointer')
+        .css('z-index', 1)
+        .removeClass('hidden')
+        .appendTo("#bg")
+
+      this.displayLightState(this.state)
+
+      jelement.on('click', () => {
+        doAction(this.segmentid, `ambientlight/${this.panel + 1}/toggle/${this.index}`)
+      })
+    }
+
+    element() { return $(`#element${this.id}`) }
+
+    displayLightState(state)
+    {
+      this.element()
+        .find('img')
+        .attr('src', state === undefined ? `/glyph/accessories/light` : `/glyph/accessories/light/${state ? '1': '0'}`)
+    }
+
+    processEvent(segmentid, panelid, event, eventdata)
+    {
+      if (segmentid !== this.segmentid) return
+      if (panelid !== `ambientlight${this.panel + 1}`) return 
+
+      //console.log(event, eventdata);
+
+      switch(event)
+      {
+        case 'nightchange':
+          if (this.index == 0)
+            if (eventdata && eventdata.length == 1)
+            {
+              this.state = eventdata[0];
+              this.displayLightState(this.state)
+            }
+          break;
+        case 'lightchange':
+          if (eventdata && eventdata.length == 2 && eventdata[0] == this.index - 1)
+          {
+            this.state = eventdata[1];
+            this.displayLightState(this.state)
+          }
+          break;
+        case 'effectchange':
+          if (eventdata && eventdata.length == 2 && eventdata[0] == this.index - 7)
+          {
+            this.state = eventdata[1];
+            this.displayLightState(this.state)
+          }
+          break;
+      }
+    }
+  }

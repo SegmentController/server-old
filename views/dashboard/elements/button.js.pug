@@ -1,0 +1,38 @@
+.context-container.hidden#button(style=`position:absolute; left:0; top:0; width: ${blockSize}px; height: ${blockSize}px;`)
+  img(oncontextmenu='return false;')
+
+script(type='text/javascript').
+  class Button {
+    id
+    segmentid
+    x
+    y
+    name
+    color
+
+    constructor(id, segmentid, x, y, name, color)
+    {
+      this.id = id
+      this.segmentid = segmentid
+      this.x = x
+      this.y = y
+      this.name = name 
+      this.color = color
+      elements[this.id] = this
+
+      const jelement = $('#button').clone()
+        .attr('id', 'element' + this.id)
+        .css('left', this.x * blockSize)
+        .css('top', this.y * blockSize)
+        .css('cursor', 'pointer')
+        .css('z-index', 1)
+        .removeClass('hidden')
+        .appendTo("#bg")
+
+      jelement.on('click', () => {
+        doAction(this.segmentid, 'button', { name: this.name })
+      })
+    }
+
+    element() { return $(`#element${this.id}`) }
+  }

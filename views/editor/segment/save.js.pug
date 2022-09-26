@@ -1,0 +1,64 @@
+script(type='text/javascript').
+  let timerAutosave = null
+  let downcountSuccessSave = 1
+  let initializationState = false
+  function stopAutosaveTimer()
+  {
+    clearTimeout(timerAutosave)
+  }
+  function startAutosaveTimer()
+  {
+    stopAutosaveTimer()
+    timerAutosave = setTimeout(() => { saveSegmentElements() }, 750)
+  }
+  function detectErrors()
+  {
+    $('#elementscontainer').children('.elementerror').removeClass('elementerror')
+
+    for(const a in elements)
+      for(const b in elements)
+      {
+        if (a != b && elements[a] instanceof Track && elements[b] instanceof Track)
+          if (elements[a].containsPoint(elements[b].x, elements[b].y))
+            elements[a].element().addClass('elementerror')
+        if (a != b && elements[a] instanceof Signal && elements[b] instanceof Signal)
+          if (elements[a].containsPoint(elements[b].x, elements[b].y))
+            elements[a].element().addClass('elementerror')
+      }
+  }
+  function needSaveSegmentElements()
+  {
+    if (initializationState)
+      return
+    $('#panelsave').fadeIn()
+    startAutosaveTimer()
+    detectErrors()
+  }
+  function saveSegmentElements(displaytoast)
+  {
+    stopAutosaveTimer()
+
+    if(!$("#panelsave").is(":visible")) return
+
+    const elementsDataToSave = {}
+    for(const id in elements)
+      if (elements[id].getSaveData)
+        elementsDataToSave[id] = elements[id].getSaveData()
+    $.post('/editor/segment/#{segment.id}/set/elements', { elements: JSON.stringify(elementsDataToSave) })
+      .done(function() { 
+        if (displaytoast && downcountSuccessSave)
+        {
+          ToastSuccess.fire({ html: 'Saved successfully<br/><small>(Will not appear next time)</small>' })
+          downcountSuccessSave--
+        }
+        $('#buttonsave').removeClass('btn-danger').addClass('btn-warning')
+        $('#panelsave').fadeOut()
+      })
+      .fail(function(xhr, status, error) {
+        if (displaytoast)
+          ToastError.fire({ html: `<b>Error</b><br/>${xhr.responseText}` })
+        else
+          $('#buttonsave').removeClass('btn-warning').addClass('btn-danger')
+        downcountSuccessSave = 1
+      })
+  }

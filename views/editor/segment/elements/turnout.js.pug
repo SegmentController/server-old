@@ -1,0 +1,219 @@
+script(type='text/javascript').
+  function cursorCreateTurnout(x, y, params)
+  {
+    new Turnout(x, y, -1, -1, params.type)
+    needSaveSegmentElements()
+  }
+
+  class Turnout {
+    id
+    x
+    y
+    panel = null
+    index = null
+    type = null
+    constructor(x, y, panel, index, type)
+    {
+      elementid++
+      this.id = elementid
+      elements[this.id] = this
+      addElementToUndoQueue(this)
+      this.x = x
+      this.y = y
+
+      const jelement = $("#turnout")
+        .clone()
+        .attr('id', 'element' + this.id)
+        .data('id', this.id)
+        .css('left', x * blockSize)
+        .css('top', y * blockSize + topMargin)
+        .css('z-index', 10)
+        .insertAfter("#turnout")
+        .removeClass('hidden')
+
+      this.setPanelIndex(panel, index)
+      this.setType(type)
+
+      const that = this
+
+      jelement.on('click', () => {
+        if (!isCtrlDown) clearSelection()
+        jelement.addClass('elementselected')
+        updateSelectionDisplay()
+        return false
+      })
+
+      const delta = { x: 0, y: 0 }
+      interact(document.getElementById('element' + this.id))
+        .draggable({
+          listeners: {
+            start (event) {
+              delta.x = 0
+              delta.y = 0
+              stopAutosaveTimer()
+              if (!isCtrlDown) clearSelection()
+              jelement.addClass('elementselected')
+              updateSelectionDisplay()
+            },
+            move (event) {
+              delta.x += event.dx
+              delta.y += event.dy
+              event.target.style.left = `${that.x * blockSize + delta.x}px`
+              event.target.style.top = `${that.y * blockSize + topMargin + delta.y}px`
+            },
+            end (event) {
+              that.setPos(jelement.offset().left / blockSize, (jelement.offset().top - topMargin) / blockSize)
+              needSaveSegmentElements()
+            }
+          },
+          modifiers: [
+            interact.modifiers.snap({
+              targets: [
+                interact.snappers.grid({ x: blockSize, y: blockSize })
+              ],
+              relativePoints: [ { x: 0, y: 0 } ]
+            }),
+            interact.modifiers.restrictRect({
+              restriction: { x: 0, y: topMargin, width: 10000, height: 10000 },
+              endOnly: false
+            })
+          ]
+        })
+        .draggable(interactsEnabled)
+    }
+
+    enableInteract(enable) { interact(document.getElementById('element' + this.id)).draggable(enable) }
+
+    element() { return $(`#element${this.id}`) }
+
+    setPanelIndex(panel, index)
+    {
+      this.panel = panel
+      this.index = index
+      this.element().prop('title', this.panel + this.index >= 0 ? `Turnout ${this.panel + 1} / ${this.index + 1}` : 'Turnout not connected')
+    }
+
+    setType(type)
+    {
+      this.type = type
+      this.element()
+        .find('img')
+        .attr('src', `/glyph/turnout/${this.type}`)
+      needSaveSegmentElements()
+    }
+
+    containsPoint(x, y) { return this.x == x && this.y == y }
+    isOverLap(x1, y1, x2, y2) { return this.x >= x1 && this.x <= x2 && this.y >= y1 && this.y <= y2 }
+
+    canMoveLeft() { return this.x > 0 }
+    canMoveUp() { return this.y > 0 }
+
+    moveLeft() { this.setPos(this.x - 1, this.y) }
+    moveRight() { this.setPos(this.x + 1, this.y) }
+    moveUp() { this.setPos(this.x, this.y - 1) }
+    moveDown() { this.setPos(this.x, this.y +1 ) }
+
+    setPos(x, y)
+    {
+      if (x < 0 || y < 0) return
+      this.x = x
+      this.y = y
+
+      this.element()
+        .css('left', this.x * blockSize)
+        .css('top', this.y * blockSize + topMargin)
+
+      needSaveSegmentElements()
+    }
+
+    rotate(anticlockwise)
+    {
+      const rotRight = ['lbturnout', 'sltrturnout', 'tlturnout', 'srtrturnout', 'rtturnout', 'slbrturnout', 'brturnout', 'srbrturnout']
+      const rotLeft = ['ltturnout', 'sltlturnout', 'trturnout', 'srtlturnout', 'rbturnout', 'slblturnout', 'blturnout', 'srblturnout']
+      const rots = [rotRight, rotLeft]
+
+      const currentType = this.type
+      for(const rot of rots)
+        if (rot.includes(currentType))
+        {
+          let index = rot.indexOf(currentType)
+          if (index >= 0)
+          {
+            index += anticlockwise ? -1 : 1
+            if (index < 0)
+              index = rot.length - 1
+            if (index > rot.length - 1)
+              index = 0
+
+            this.setType(rot[index])
+          }
+          break
+        }
+    }
+
+    remove()
+    {
+      if (this.id in elements)
+        delete elements[this.id]
+      this.element().remove()
+      needSaveSegmentElements()
+    }
+
+    setCopyCursor() { setCursor('/glyph/turnout/' + this.type, cursorCreateTurnout, { type: this.type}) }
+
+    getSaveData() { return { class: 'turnout', x: this.x, y: this.y, panel: this.panel, index: this.index, type: this.type } }
+
+    getConnectionInfo() { return this.panel + this.index >= 0 ? `Turnout ${this.panel + 1} / ${this.index + 1}` : 'Turnout not connected' }
+
+    async inputSetPanel()
+    {
+      const { value: newPanelIndex } = await Swal.fire({
+        title: 'Select panel for signal',
+        input: 'select',
+        inputValue: (this.panel + 1) * 10 + this.index + 1,
+        inputOptions: {
+          0: 'Not connected',
+          'Turnout#1': {
+            11: 'Turnout#1 A',
+            12: 'Turnout#1 B',
+            13: 'Turnout#1 C',
+            14: 'Turnout#1 D',
+            15: 'Turnout#1 E',
+            16: 'Turnout#1 F'
+          },
+          'Turnout#2': {
+            21: 'Turnout#2 A',
+            22: 'Turnout#2 B',
+            23: 'Turnout#2 C',
+            24: 'Turnout#2 D',
+            25: 'Turnout#2 E',
+            26: 'Turnout#2 F'
+          },
+          'Turnout#3': {
+            31: 'Turnout#3 A',
+            32: 'Turnout#3 B',
+            33: 'Turnout#3 C',
+            34: 'Turnout#3 D',
+            35: 'Turnout#3 E',
+            36: 'Turnout#3 F'
+          },
+          'Turnout#4': {
+            41: 'Turnout#4 A',
+            42: 'Turnout#4 B',
+            43: 'Turnout#4 C',
+            44: 'Turnout#4 D',
+            45: 'Turnout#4 E',
+            46: 'Turnout#4 F'
+          }
+        },
+        //inputPlaceholder: 'Select panel and index',
+        showCancelButton: true
+      })
+
+      if (newPanelIndex !== undefined)
+      {
+        this.setPanelIndex(Math.floor(newPanelIndex / 10) - 1, newPanelIndex % 10 - 1)
+        return true
+      }
+    }
+  }
