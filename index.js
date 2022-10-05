@@ -25,8 +25,8 @@ const gracefullyClose = async function gfClose(signal) {
 
   const forceClose = setTimeout(() => process.exit(1), 1500)
 
-  // if (global.wifi)
-  //   global.wifi.StopServer()
+  if (global.wifi)
+    global.wifi.StopServer()
 
   if (global.ws)
     global.ws.close()
@@ -43,9 +43,8 @@ const gracefullyClose = async function gfClose(signal) {
         return process.exit(1)
       })
 }
-process.on('SIGTERM', gracefullyClose)
-process.on('SIGINT', gracefullyClose)
-process.on('SIGUSR2', gracefullyClose)
+for (const signal of ['SIGTERM', 'SIGINT', 'SIGUSR2'])
+  process.on(signal, gracefullyClose)
 
 process.on('uncaughtException', function (error) {
   if (!global.layoutManager.dispatchErrorToExecutor(error))
