@@ -91,16 +91,19 @@ module.exports = (fastify) => {
         const light = global.segments.AccessSegmentById(segmentid).getAmbientLight(panelindex)
         if (light)
           switch (index) {
-            case 0:
+            case 0: {
               light.ToggleNight()
               break
+            }
             case 7:
-            case 8:
+            case 8: {
               light.ToggleEffect(index - 7)
               break
-            default:
+            }
+            default: {
               light.ToggleLight(index - 1)
               break
+            }
           }
         reply.send()
       })
@@ -114,16 +117,19 @@ module.exports = (fastify) => {
           const light = global.segments.AccessSegmentById(segmentid).getAmbientLight(panelindex)
           if (light)
             switch (index - 1) {
-              case 0:
+              case 0: {
                 light.SetNight(state)
                 break
+              }
               case 7:
-              case 8:
+              case 8: {
                 light.SetEffect(index - 7, state)
                 break
-              default:
+              }
+              default: {
                 light.SetLight(index - 1, state)
                 break
+              }
             }
         }
         reply.send()
