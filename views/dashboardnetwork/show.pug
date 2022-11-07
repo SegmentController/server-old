@@ -15,15 +15,11 @@ else
                                 p.card-text
                                     ul
                                     each panel, name in segment.panels
-                                        li(style='list-style-type: none' title='Uptime: ' + panel.uptime)
+                                      center
+                                        button.btn.btn-secondary(title='Uptime: ' + panel.uptime + '\nPackets: ' + panel.i2c)
                                             = name
-                                            span.float-end.small
-                                                = panel.version
-                                                small
-                                                    br
-                                                    = panel.uptime
-                                                    br
-                                                    = panel.i2c
+                                        br
+                                        br
                             else
                                 h6.card-subtitle.text-muted
                                     | No panel info
