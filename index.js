@@ -52,3 +52,14 @@ process.on('uncaughtException', function (error) {
 })
 
 global.segments.InitializeEventsToDashboard()
+
+
+
+setInterval(async () => {
+  const sg6 = global.segments.AccessSegmentById(6)
+  try {
+    const cfg = await sg6.ambientlight.GetConfig()
+    console.log(cfg)
+  }
+  catch { console.log('Cannot retrieve config') }
+}, 7000)
